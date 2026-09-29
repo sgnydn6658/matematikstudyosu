@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Matematik Stüdyosu</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg-light: #f8f9fa;
+            --border: #e2e8f0;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-light);
+        }
+
+        /* HEADER */
+        header {
+            height: 48px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #f1c40f;
+        }
+
+        .top-tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-top {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-top:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* WORKSPACE */
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR (AKORDEON) */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 5;
+            flex-shrink: 0;
+        }
+
+        .accordion-item {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .accordion-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary);
+            background: #fff;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .accordion-header:hover {
+            background: #f1f5f9;
+        }
+
+        .accordion-header::after {
+            content: '❯';
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .accordion-item.active .accordion-header::after {
+            transform: rotate(90deg);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 8px;
+            background: #f8fafc;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .accordion-item.active .accordion-content {
+            display: grid;
+        }
+
+        .tool-btn {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            color: #475569;
+            transition: all 0.15s;
+        }
+
+        .tool-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .tool-btn span.icon {
+            font-size: 1.2rem;
+        }
+
+        /* CANVAS AREA */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: #ffffff;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+        }
+
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .objects-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* BOTTOM TOOLBAR (ÇİZİM VE RENK PANELDİR) */
+        .bottom-toolbar {
+            height: 60px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .draw-tools {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .draw-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #475569;
+        }
+
+        .draw-btn.active {
+            background: #e0f2fe;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px var(--border);
+        }
+
+        .color-dot.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .size-picker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* STYLED OBJECTS & SELECTION CONTROLS */
+        .manipulative-obj {
+            position: absolute;
+            pointer-events: auto;
+            cursor: move;
+            border: 2px transparent dashed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .manipulative-obj.selected {
+            border-color: var(--accent);
+        }
+
+        .context-menu {
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: none;
+            gap: 6px;
+            z-index: 100;
+        }
+
+        .manipulative-obj.selected .context-menu {
+            display: flex;
+        }
+
+        .ctx-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .ctx-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: none;
+        }
+
+        .manipulative-obj.selected .resize-handle {
+            display: block;
+        }
+
+        .handle-se { bottom: -5px; right: -5px; cursor: se-resize; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo">📐 Matematik Stüdyosu</div>
+        <div class="top-tools">
+            <button class="btn-top" onclick="clearCanvas()">🗑️ Temizle</button>
+            <button class="btn-top" onclick="toggleFullscreen()">🖥️ Tam Ekran</button>
+        </div>
+    </header>
+
+    <!-- WORKSPACE -->
+    <div class="workspace">
+        
+        <!-- SIDEBAR AKORDEON MENÜ -->
+        <div class="sidebar">
+            
+            <!-- 1. GEOMETRİ -->
+            <div class="accordion-item active">
+                <div class="accordion-header" onclick="toggleAccordion(this)">1. Geometri</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addShape('square')"><span class="icon">🟦</span>Kare</button>
+                    <button class="tool-btn" onclick="addShape('rect')"><span class="icon">▭</span>Dikdörtgen</button>
+                    <button class="tool-btn" onclick="addShape('triangle')"><span class="icon">🔺</span>Üçgen</button>
+                    <button class="tool-btn" onclick="addShape('circle')"><span class="icon">⚪</span>Çember</button>
+                    <button class="tool-btn" onclick="addShape('ruler')"><span class="icon">📏</span>Cetvel</button>
+                    <button class="tool-btn" onclick="addShape('protractor')"><span class="icon">📐</span>Açıölçer</button>
+                </div>
+            </div>
+
+            <!-- 2. SAYILAR -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">2. Sayılar</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addBaseBlock('unit')"><span class="icon">▪️</span>Birlik (1)</button>
+                    <button class="tool-btn" onclick="addBaseBlock('ten')"><span class="icon">▮</span>Onluk (10)</button>
+                    <button class="tool-btn" onclick="addBaseBlock('hundred')"><span class="icon">◼️</span>Yüzlük (100)</button>
+                    <button class="tool-btn" onclick="addTool('numberline')"><span class="icon">📏</span>Sayı Doğrusu</button>
+                    <button class="tool-btn" onclick="addTool('hundred-grid')"><span class="icon">🔢</span>Yüzlük Tablo</button>
+                </div>
+            </div>
+
+            <!-- 3. KESİRLER -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">3. Kesirler</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addFraction('strip')"><span class="icon">▬</span>Kesir Şeridi</button>
+                    <button class="tool-btn" onclick="addFraction('circle')"><span class="icon">🍕</span>Kesir Dairesi</button>
+                    <button class="tool-btn" onclick="addFraction('wall')"><span class="icon">🧱</span>Kesir Duvarı</button>
+                </div>
+            </div>
+
+            <!-- 4. CEBİR -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">4. Cebir</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addTool('algebra-tile')"><span class="icon">🟨</span>Cebir Karo</button>
+                    <button class="tool-btn" onclick="addTool('balance')"><span class="icon">⚖️</span>Eşitlik Terazisi</button>
+                </div>
+            </div>
+
+            <!-- 5. OLASILIK VE VERİ ANALİZİ -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">5. Olasılık ve Veri Analizi</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addTool('dice')"><span class="icon">🎲</span>Zar</button>
+                    <button class="tool-btn" onclick="addTool('spinner')"><span class="icon">🎡</span>Çarkıfelek</button>
+                    <button class="tool-btn" onclick="addTool('coin')"><span class="icon">🪙</span>Madeni Para</button>
+                    <button class="tool-btn" onclick="addTool('chart')"><span class="icon">📊</span>Sütun Grafiği</button>
+                </div>
+            </div>
+
+            <!-- 6. OYUNLAR -->
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">6. Oyunlar</div>
+                <div class="accordion-content">
+                    <button class="tool-btn" onclick="addGame('number-hunter')"><span class="icon">🎯</span>Sayı Avcısı</button>
+                    <button class="tool-btn" onclick="addGame('geo-puzzle')"><span class="icon">🧩</span>Geometrik Bulmaca</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CANVAS BÖLGESİ -->
+        <div class="canvas-container" id="canvas-container">
+            <canvas id="drawing-canvas"></canvas>
+            <div class="objects-layer" id="objects-layer"></div>
+        </div>
+
+    </div>
+
+    <!-- ALT BİLGİ (ÇİZİM VE RENK PALETİ) -->
+    <div class="bottom-toolbar">
+        <div class="draw-tools">
+            <button class="draw-btn active" id="btn-select" onclick="setMode('select')" title="Seç / Taşı">🖐️</button>
+            <button class="draw-btn" id="btn-pen" onclick="setMode('pen')" title="Kalem">✏️</button>
+            <button class="draw-btn" id="btn-highlighter" onclick="setMode('highlighter')" title="Fosforlu Kalem">🖍️</button>
+            <button class="draw-btn" id="btn-eraser" onclick="setMode('eraser')" title="Silgi">🧹</button>
+        </div>
+
+        <div class="color-palette">
+            <div class="color-dot active" style="background:#2c3e50" onclick="setColor('#2c3e50', this)"></div>
+            <div class="color-dot" style="background:#e74c3c" onclick="setColor('#e74c3c', this)"></div>
+            <div class="color-dot" style="background:#e67e22" onclick="setColor('#e67e22', this)"></div>
+            <div class="color-dot" style="background:#f1c40f" onclick="setColor('#f1c40f', this)"></div>
+            <div class="color-dot" style="background:#2ecc71" onclick="setColor('#2ecc71', this)"></div>
+            <div class="color-dot" style="background:#3498db" onclick="setColor('#3498db', this)"></div>
+            <div class="color-dot" style="background:#9b59b6" onclick="setColor('#9b59b6', this)"></div>
+        </div>
+
+        <div class="size-picker">
+            <span>Kalınlık:</span>
+            <input type="range" id="brush-size" min="2" max="30" value="4" oninput="updateBrushSize(this.value)">
+        </div>
+    </div>
+
+    <script>
+        // AKORDEON MENÜ KONTROLÜ
+        function toggleAccordion(header) {
+            const item = header.parentElement;
+            const isActive = item.classList.contains('active');
+            
+            document.querySelectorAll('.accordion-item').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            if (!isActive) {
+                item.classList.add('active');
+            }
+        }
+
+        // CANVAS ÇİZİM SİSTEMİ
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        let isDrawing = false;
+        let mode = 'select';
+        let strokeColor = '#2c3e50';
+        let strokeWidth = 4;
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+            if(m === 'select') document.getElementById('btn-select').classList.add('active');
+            if(m === 'pen') document.getElementById('btn-pen').classList.add('active');
+            if(m === 'highlighter') document.getElementById('btn-highlighter').classList.add('active');
+            if(m === 'eraser') document.getElementById('btn-eraser').classList.add('active');
+        }
+
+        function setColor(c, el) {
+            strokeColor = c;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function updateBrushSize(val) {
+            strokeWidth = val;
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if(mode === 'select') return;
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if(!isDrawing || mode === 'select') return;
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.strokeStyle = mode === 'eraser' ? '#ffffff' : (mode === 'highlighter' ? strokeColor + '66' : strokeColor);
+            ctx.lineWidth = mode === 'highlighter' ? strokeWidth * 3 : strokeWidth;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        });
+
+        canvas.addEventListener('pointerup', () => isDrawing = false);
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('objects-layer').innerHTML = '';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // NESNE EKLEME VE SEÇME
+        function addShape(type) {
+            const layer = document.getElementById('objects-layer');
+            const obj = document.createElement('div');
+            obj.className = 'manipulative-obj';
+            obj.style.left = '100px';
+            obj.style.top = '100px';
+            obj.style.width = '80px';
+            obj.style.height = '80px';
+
+            if(type === 'square') obj.style.background = '#3498db';
+            if(type === 'rect') { obj.style.width = '120px'; obj.style.background = '#2ecc71'; }
+            if(type === 'circle') { obj.style.borderRadius = '50%'; obj.style.background = '#e74c3c'; }
+
+            obj.innerHTML = `
+                <div class="context-menu">
+                    <button class="ctx-btn" onclick="this.parentElement.parentElement.remove()">🗑️</button>
+                </div>
+                <div class="resize-handle handle-se"></div>
+            `;
+
+            makeDraggable(obj);
+            layer.appendChild(obj);
+        }
+
+        function makeDraggable(el) {
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            el.addEventListener('pointerdown', (e) => {
+                if(mode !== 'select') return;
+                document.querySelectorAll('.manipulative-obj').forEach(o => o.classList.remove('selected'));
+                el.classList.add('selected');
+
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = el.offsetLeft;
+                initialTop = el.offsetTop;
+                el.setPointerCapture(e.pointerId);
+            });
+
+            el.addEventListener('pointermove', (e) => {
+                if(!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                el.style.left = (initialLeft + dx) + 'px';
+                el.style.top = (initialTop + dy) + 'px';
+            });
+
+            el.addEventListener('pointerup', (e) => {
+                isDragging = false;
+                try { el.releasePointerCapture(e.pointerId); } catch(err){}
+            });
+        }
+    </script>
+</body>
+</html>
