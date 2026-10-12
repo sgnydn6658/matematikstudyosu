@@ -1,0 +1,3224 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Pardus / Linux tarayıcıları için ek optimizasyon -->
+  <meta name="theme-color" content="#000000">
+  <meta name="msapplication-TileColor" content="#000000">
+
+  
+  <title>Gelişmiş Etkileşimli Matematik ve Geometri Tahtası</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsPDF CDN (PDF Dışa Aktarımı İçin) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+
+
+* {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+      /* Akıllı tahta için sabit en-boy oranı (16:9) */
+      aspect-ratio: 16 / 9;
+    }
+
+    /* 1920x1080 (en yaygın akıllı tahta çözünürlüğü) */
+    @media (min-width: 1800px) {
+      body {
+        font-size: 18px;
+      }
+    }
+
+    /* 4K tahtalar için */
+    @media (min-width: 3000px) {
+      body {
+        font-size: 28px;
+      }
+    }
+
+    /* Tam ekran kutu */
+    .tahta-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: white;
+      position: relative;
+    }
+
+    /* Örnek içerik */
+    h1 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: clamp(1rem, 2.5vw, 1.8rem);
+      opacity: 0.9;
+    }
+
+    /* Dokunmatik buton örneği */
+    .btn {
+      margin-top: 2rem;
+      padding: 1rem 2.5rem;
+      font-size: clamp(1.1rem, 2vw, 1.6rem);
+      background: #0f3460;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .btn:active {
+      transform: scale(0.95);
+      background: #e94560;
+    }
+
+   
+
+
+
+   
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+
+<div class="tahta-container">
+    <h1>Pardus + Akıllı Tahta</h1>
+    <p>Çözünürlük otomatik ayarlandı • Zoom kapalı • Tam ekran hazır</p>
+    <button class="btn" onclick="toggleFullscreen()">Tam Ekran Yap</button>
+  </div>
+
+
+     
+     
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      overflow: hidden;
+      background-color: #ffffff;
+      color: #1e293b;
+      overscroll-behavior: none;
+      /* Body'de touch-action:none YOK — menü kaydırması telefon/tablette çalışsın */
+    }
+    /* Çizim alanı: akıllı tahta + mobil — kaydırma/zoom jesti yok, sadece çizim */
+    #drawCanvas, #instrumentsLayer, #imageLayer, #workspace, .instrument, #compassContainer {
+      touch-action: none;
+      -ms-touch-action: none;
+    }
+    /* Menü ve palet: dikey/yatay kaydırma serbest (telefon-tablet) */
+    #sidebar, #sidebar * {
+      touch-action: pan-y;
+      -ms-touch-action: pan-y;
+    }
+    #bottomPalette, #bottomPalette * {
+      touch-action: pan-x pan-y;
+      -ms-touch-action: pan-x pan-y;
+    }
+    #sidebar input, #sidebar textarea, #sidebar select,
+    #textInputBox, #textInputBox * {
+      touch-action: auto;
+      -ms-touch-action: auto;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    /* Tahta Arka Planı ve Izgaralar */
+    .board-bg {
+      background-color: #ffffff;
+    }
+    
+    /* Kareli Izgara */
+    .board-bg.grid-graph {
+      background-image: 
+        linear-gradient(to right, rgba(51, 65, 85, 0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(51, 65, 85, 0.12) 1px, transparent 1px);
+      background-size: 25px 25px;
+    }
+
+    /* Noktalı Izgara */
+    .board-bg.grid-dots {
+      background-image: radial-gradient(rgba(51, 65, 85, 0.25) 1.5px, transparent 0);
+      background-size: 24px 24px;
+      background-position: -0.5px -0.5px;
+    }
+
+    /* İzometrik Izgara */
+    .board-bg.grid-isometric {
+      background-image: 
+        radial-gradient(rgba(51, 65, 85, 0.25) 1px, transparent 0);
+      background-size: 30px 51.96px;
+    }
+
+    /* Şeffaf Akrilik Cam Araçlar */
+    .instrument {
+      position: absolute;
+      touch-action: none;
+      transform-origin: 0 0;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+      cursor: grab;
+      z-index: 30;
+    }
+
+    .instrument:active {
+      cursor: grabbing;
+    }
+
+    .glass-acrylic {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      border: 1.5px solid rgba(100, 116, 139, 0.45);
+      box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.22), 0 5px 14px rgba(0, 0, 0, 0.10);
+    }
+
+    .geometry-icon {
+      width: 22px; height: 22px; flex: 0 0 22px;
+      stroke: currentColor; fill: none; stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    #workspace { min-width: 0; min-height: 0; }
+
+    #bottomPalette {
+      max-width: calc(100vw - 280px);
+      overflow-x: auto;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+    #btnSidebarToggle {
+      display: none;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 90;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.94);
+      color: #e2e8f0;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #sidebarOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 35;
+      touch-action: none;
+    }
+    #sidebarOverlay.open { display: block; }
+
+    /* Tablet */
+    @media (max-width: 900px) {
+      #sidebar { width: 170px !important; flex: 0 0 170px; }
+      #bottomPalette {
+        left: calc(50% + 105px);
+        max-width: calc(100vw - 235px);
+        gap: 0.4rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+      .draw-tool span { display: none; } /* metin gizle, ikon kalsın */
+    }
+    /* Telefon / dar tablet — menü çekmece; tahta tam genişlik */
+    @media (max-width: 700px) {
+      body { height: 100dvh; height: 100vh; }
+      #btnSidebarToggle { display: flex; }
+      #sidebar {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: min(280px, 86vw) !important;
+        flex: none !important;
+        z-index: 80;
+        transform: translateX(-105%);
+        transition: transform 0.22s ease;
+        box-shadow: 8px 0 28px rgba(0,0,0,0.35);
+        pointer-events: none; /* kapalıyken dokunuşları engelleme */
+      }
+      #sidebar.mobile-open {
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+      /* fixed sidebar akıştan çıktığı için workspace tam genişlik */
+      #workspace { width: 100%; flex: 1 1 100%; }
+      #bottomPalette {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        max-width: calc(100vw - 16px) !important;
+        bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+        gap: 0.35rem;
+        padding: 0.4rem 0.5rem;
+      }
+      #shapeMenu, #polygonMenu, #backgroundPicker {
+        right: 8px !important;
+        max-width: calc(100vw - 60px);
+      }
+      #shapeMenu { top: 56px !important; }
+      .handle { width: 36px; height: 36px; }
+    }
+    @media (max-width: 420px) {
+      #bottomPalette .color-preset { width: 22px; height: 22px; }
+      #penWidth { width: 56px !important; }
+    }
+
+    /* Yüklenen Görsel Element Stili */
+    .placed-image-container {
+      position: absolute;
+      touch-action: none;
+      z-index: 25;
+      cursor: move;
+      border: 2px dashed transparent;
+      transition: border-color 0.2s;
+    }
+
+    .placed-image-container.active {
+      border-color: #2563eb;
+    }
+
+    /* Tutamaçlar (Akıllı tahtada parmakla kolay tutulabilmesi için boyutu büyütüldü) */
+    .handle {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border: 2.5px solid #ffffff;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 60;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      transition: transform 0.15s ease, background-color 0.15s;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .handle:hover {
+      transform: scale(1.25);
+    }
+
+    .rotate-handle {
+      background-color: #2563eb;
+    }
+    .rotate-handle:hover {
+      background-color: #1d4ed8;
+    }
+
+    .resize-handle {
+      background-color: #059669;
+    }
+    .resize-handle:hover {
+      background-color: #047857;
+    }
+
+    .delete-handle {
+      background-color: #dc2626;
+    }
+    .delete-handle:hover {
+      background-color: #b91c1c;
+    }
+
+    /* Modern Pergel Özel Stil */
+    #compassContainer {
+      position: absolute;
+      touch-action: none;
+      z-index: 35;
+      filter: drop-shadow(0 14px 32px rgba(15, 23, 42, 0.28));
+    }
+
+    .img-bg-btn {
+      position: absolute;
+      left: 4px;
+      bottom: 4px;
+      z-index: 70;
+      background: rgba(15, 23, 42, 0.92);
+      color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 12px;
+      min-height: 36px;
+      min-width: 44px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      white-space: nowrap;
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .img-bg-btn:hover, .img-bg-btn:active {
+      background: #1d4ed8;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    @media (max-width: 700px) {
+      .img-bg-btn {
+        font-size: 12px;
+        padding: 10px 14px;
+        min-height: 44px;
+        left: 6px;
+        bottom: 6px;
+      }
+    }
+    .instrument.edge-draw {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%231e293b' stroke='%23ffffff' stroke-width='1.2' d='M3 21l3.5-1 11-11-2.5-2.5-11 11L3 21z'/%3E%3Cpath fill='%23f8fafc' stroke='%231e293b' stroke-width='0.8' d='M14.5 6.5l2.5 2.5 1.8-1.8a1.5 1.5 0 0 0 0-2.1L17.4 3.7a1.5 1.5 0 0 0-2.1 0L14.5 6.5z'/%3E%3C/svg%3E") 2 22, crosshair !important;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex text-slate-800 antialiased select-none overflow-hidden bg-white">
+
+  <!-- Mobil menü aç/kapa (telefon-tablet; geniş ekranda gizli) -->
+  <button type="button" id="btnSidebarToggle" title="Menü" aria-label="Menüyü aç">
+    <i data-lucide="menu" class="w-5 h-5"></i>
+  </button>
+  <div id="sidebarOverlay" aria-hidden="true"></div>
+
+  <!-- 1. SOL DİKEY MENÜ PANELİ -->
+  <aside id="sidebar" class="w-45 bg-slate-900/95 border-r border-slate-800 text-slate-100 z-40 flex flex-col justify-between py-3 px-3 group shrink-0 shadow-2xl backdrop-blur-md">
+    
+    <div class="flex flex-col gap-3 overflow-y-auto pr-1">
+      <!-- Logo / Başlık -->
+      <div class="flex items-center gap-3 px-2 py-1 text-indigo-400 font-bold border-b border-slate-800 pb-2.5">
+        <i data-lucide="shapes" class="w-7 h-7 shrink-0 text-indigo-400"></i>
+        <div class="min-w-0 overflow-hidden">
+          <div class="text-m whitespace-nowrap text-white font-bold tracking-wide">GEOMATİK</div>
+          <div class="text-[11px] whitespace-nowrap text-indigo-300 font-semibold tracking-wide">Dijital Matematik Eğitimi</div>
+        </div>
+      </div>
+
+      <!-- PDF & Görsel İçe Aktarma -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-2 whitespace-nowrap">Dosya & Medya</span>
+        
+        <label class="flex items-center gap-3 p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition shadow-md">
+          <i data-lucide="file-up" class="w-5 h-5 shrink-0"></i>
+          <span class="text-xs font-medium whitespace-nowrap">PDF Aç</span>
+          <input type="file" id="pdfInput" accept="application/pdf" class="hidden">
+        </label>
+
+        <label class="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition shadow-md">
+          <i data-lucide="image" class="w-5 h-5 shrink-0"></i>
+          <span class="text-xs font-medium whitespace-nowrap">Resim Yükle</span>
+          <input type="file" id="imageInput" accept="image/*" class="hidden">
+        </label>
+
+        <!-- PDF Kontrolleri -->
+        <div id="pdfControls" class="flex flex-col gap-1.5 hidden bg-slate-800/80 p-2 rounded-xl border border-slate-700/60">
+          <div class="flex items-center justify-between text-xs">
+            <button id="prevPage" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Önceki Sayfa">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span class="font-mono text-[11px] text-slate-200 flex items-center gap-1">
+              <input type="number" id="pageNum" value="1" min="1" class="w-8 bg-slate-900 border border-slate-700 text-center rounded text-white text-xs py-0.5">
+              <span id="pageCount" class="text-slate-400">/ 0</span>
+            </span>
+            <button id="nextPage" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Sonraki Sayfa">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-700/50 text-xs">
+            <button id="zoomOut" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Uzaklaştır"><i data-lucide="zoom-out" class="w-4 h-4"></i></button>
+            <span id="zoomLevel" class="font-mono text-[10px] text-slate-400">100%</span>
+            <button id="zoomIn" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Yakınlaştır"><i data-lucide="zoom-in" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geometri Araçları -->
+      <div class="flex flex-col gap-1 border-t border-slate-800 pt-2.5">
+        <span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-2 whitespace-nowrap">Geometri Araçları</span>
+
+        <button id="btnRuler" class="tool-btn flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="geometry-icon text-amber-400" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M6 8v4M9 8v3M12 8v4M15 8v3M18 8v4"/></svg>
+          <span class="text-xs font-medium whitespace-nowrap">Cetvel</span>
+        </button>
+        <button id="btnProtractor" class="tool-btn flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="geometry-icon text-sky-400" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19a9 9 0 0 1 18 0H3Z"/><path d="M6 16h.01M9 13h.01M12 12h.01M15 13h.01M18 16h.01"/><path d="M12 19v-7"/></svg>
+          <span class="text-xs font-medium whitespace-nowrap">Açıölçer</span>
+        </button>
+        <button id="btnTriangle45" class="tool-btn flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="geometry-icon text-emerald-400" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4h16L4 20Z"/><path d="M4 16h4v4"/><path d="M8 16h8"/></svg>
+          <span class="text-xs font-medium whitespace-nowrap">Gönye</span>
+        </button>
+        <button id="btnCompass" class="tool-btn flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="geometry-icon text-rose-400" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4" r="2"/><path d="M12 6v3M11 9 5 20M13 9l6 11M7 18h4M13 18h4"/><path d="M9 9h6"/></svg>
+          <span class="text-xs font-medium whitespace-nowrap">Pergel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Alt İşlem ve Ekran/Dışa Aktar Butonları -->
+    <div class="flex flex-col gap-1.5 border-t border-slate-800 pt-2.5">
+      <div class="flex items-center justify-between gap-1">
+        <button id="btnUndo" class="p-2 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition flex-1 flex justify-center" title="Geri Al">
+          <i data-lucide="undo" class="w-5 h-5"></i>
+        </button>
+        <button id="btnRedo" class="p-2 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition flex-1 flex justify-center" title="İleri Al">
+          <i data-lucide="redo" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Dışa Aktar (Export) Seçeneği -->
+      <div class="relative" id="exportMenuWrap">
+        <button id="btnExport" type="button" class="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+          <i data-lucide="download" class="w-5 h-5 shrink-0 text-cyan-400"></i>
+          <span class="text-xs font-medium whitespace-nowrap">Dışa Aktar</span>
+        </button>
+        <div id="exportMenu" class="hidden flex-col rounded-xl p-1 shadow-2xl z-[100] w-40 gap-1 border border-slate-600" style="position:fixed; background:#1e293b; color:#e2e8f0;">
+          <button id="exportPNG" type="button" class="p-2 text-left text-xs hover:bg-slate-700 text-slate-200 rounded-lg flex items-center gap-2 w-full bg-transparent border-0 cursor-pointer">
+            <i data-lucide="image" class="w-4 h-4 text-emerald-400"></i> PNG Görsel
+          </button>
+          <button id="exportPDF" type="button" class="p-2 text-left text-xs hover:bg-slate-700 text-slate-200 rounded-lg flex items-center gap-2 w-full bg-transparent border-0 cursor-pointer">
+            <i data-lucide="file-text" class="w-4 h-4 text-rose-400"></i> PDF Belgesi
+          </button>
+        </div>
+      </div>
+
+      <button id="btnFullscreen" class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition">
+        <i data-lucide="maximize" class="w-5 h-5 shrink-0 text-amber-400"></i>
+        <span class="text-xs font-medium whitespace-nowrap">Tam Ekran</span>
+      </button>
+
+      <button id="btnClear" class="flex items-center gap-3 p-2.5 bg-rose-900/40 hover:bg-rose-800/60 text-rose-200 border border-rose-700/60 rounded-xl transition">
+        <i data-lucide="trash-2" class="w-5 h-5 shrink-0"></i>
+        <span class="text-xs font-semibold whitespace-nowrap">Tahtayı Temizle</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 2. ANA ÇALIŞMA ALANI -->
+  <main id="workspace" class="relative flex-1 board-bg bg-white overflow-hidden">
+    <!-- Sağ üst hızlı arka plan seçimi -->
+    <div id="backgroundPicker" class="absolute top-3 right-3 z-[70]">
+      <button id="btnBackgroundPicker" type="button" class="flex items-center gap-2 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur hover:bg-white" aria-expanded="false" title="Tahta arka planını değiştir">
+        <i data-lucide="palette" class="w-4 h-4 text-indigo-600"></i><span>Arka Plan</span><i data-lucide="chevron-down" class="w-3 h-3"></i>
+      </button>
+      <div id="backgroundPickerMenu" class="hidden mt-2 w-56 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+        <div class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tahta görünümü</div>
+        <button type="button" data-board-bg="none" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-300 bg-white"></span>Düz beyaz</button>
+        <button type="button" data-board-bg="graph" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-300" style="background-image:linear-gradient(#cbd5e1 1px,transparent 1px),linear-gradient(90deg,#cbd5e1 1px,transparent 1px);background-size:5px 5px"></span>Kareli</button>
+        <button type="button" data-board-bg="dots" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-300" style="background-image:radial-gradient(#64748b 1px,transparent 1px);background-size:5px 5px"></span>Noktalı</button>
+        <button type="button" data-board-bg="isometric" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-300" style="background-color:#f8fafc;background-image:repeating-linear-gradient(30deg,transparent 0 4px,#cbd5e1 4px 5px),repeating-linear-gradient(150deg,transparent 0 4px,#cbd5e1 4px 5px)"></span>İzometrik</button>
+        <button type="button" data-board-bg="dark" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-500 bg-slate-800"></span>Koyu tahta</button>
+        <button type="button" data-board-bg="blue" class="board-bg-option flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-indigo-50"><span class="h-4 w-4 rounded border border-slate-300 bg-sky-50"></span>Açık mavi</button>
+      </div>
+    </div>
+    <button id="pdfCloseButton" type="button" class="hidden absolute top-3 left-3 z-[80] items-center gap-2 rounded-xl border border-rose-200 bg-white/95 px-3 py-2 text-xs font-semibold text-rose-700 shadow-lg backdrop-blur hover:bg-rose-50" title="Açık PDF'yi kapat">
+      <i data-lucide="x" class="w-4 h-4"></i><span>PDF'yi Kapat</span>
+    </button>
+    <!-- Çizim Modu ve Şekiller -->
+    <div id="shapeMenu" class="absolute top-[58px] right-3 z-[70] w-56 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur transition-[top] duration-150">
+      <div class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Çizim Modu / Şekil</div>
+      <select id="shapeSelect" class="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-lg p-2 focus:outline-none w-full cursor-pointer">
+        <option value="free">✏️ Serbest Çizim</option>
+        <option value="text">🔤 Metin / Yazı</option>
+        <option value="line">📏 Doğru Parçası</option>
+        <option value="ray">↗️ Işın</option>
+        <option value="lineInfinite">↔️ Doğru</option>
+        <option value="angle">∠ Açı (3 Nokta)</option>
+        <option value="arrow">➔ Ok İşareti</option>
+        <option value="circle">⭕ Daire / Çember</option>
+        <option value="rect">🔲 Dikdörtgen</option>
+        <option value="polygon">⬡ Düzgün Çokgen</option>
+      </select>
+    </div>
+
+    <!-- Düzgün Çokgen menüsü: Çizim Modu/Şekil menüsünün hemen altında ayrı açılır kontrol -->
+    <div id="polygonMenu" class="absolute top-[122px] right-3 z-[70] w-56">
+      <button id="btnPolygonMenu" type="button" class="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur hover:bg-white">
+        <span>⬡ Düzgün Çokgen</span><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+      </button>
+      <div id="polygonMenuPanel" class="hidden mt-2 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-1 pb-1">Kenar Sayısı</div>
+        <div class="flex items-center gap-2">
+          <button id="polygonMinus" type="button" class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold">−</button>
+          <input id="polygonSides" type="number" min="3" max="30" value="5" class="flex-1 min-w-0 bg-slate-800 border border-slate-700 text-white text-center rounded-lg p-1.5 text-xs">
+          <button id="polygonPlus" type="button" class="w-8 h-8 rounded-lg bg-slate-800 text-white font-bold">+</button>
+        </div>
+        <div class="text-[9px] text-slate-500 mt-1 px-1">Tahtaya sürükleyerek çiz. Yönü sürükleme açısı belirler.</div>
+        <button id="btnUsePolygon" type="button" class="w-full mt-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2">Çokgen Çiz</button>
+      </div>
+    </div>
+
+    <!-- PDF Canvas Katmanı -->
+    <canvas id="pdfCanvas" class="absolute top-0 left-0 pointer-events-none z-0"></canvas>
+    
+    <!-- Çizim Canvas Katmanı -->
+    <canvas id="drawCanvas" class="absolute top-0 left-0 z-10 cursor-crosshair"></canvas>
+
+    <!-- Yüklenen Görseller Katmanı -->
+    <div id="imageLayer" class="absolute inset-0 pointer-events-none z-20"></div>
+
+    <!-- Metin Giriş Kutusu (Dinamik Açılır) -->
+    <div id="textInputBox" class="absolute hidden z-50 bg-slate-900/90 border border-slate-700 p-2 rounded-xl shadow-2xl backdrop-blur-md flex flex-col gap-2">
+      <div class="flex items-center gap-2 border-b border-slate-700 pb-1">
+        <input type="number" id="fontSizeInput" value="24" min="12" max="120" class="w-14 bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-xs text-white">
+        <button id="btnBold" class="p-1 rounded bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 w-6 h-6 flex items-center justify-center">B</button>
+        <button id="btnItalic" class="p-1 rounded bg-slate-800 text-white italic text-xs hover:bg-slate-700 w-6 h-6 flex items-center justify-center">I</button>
+        <button id="btnApplyText" class="p-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded px-2 ml-auto">Ekle</button>
+      </div>
+      <textarea id="textContent" placeholder="Metninizi yazın..." class="bg-slate-800 text-white text-sm p-2 rounded border border-slate-700 focus:outline-none resize-none" rows="2" cols="25"></textarea>
+    </div>
+
+    <!-- 3. GEOMETRİ ARAÇLARI KATMANI -->
+    <div id="instrumentsLayer" class="absolute inset-0 z-30 pointer-events-none">
+      
+      <!-- CETVEL -->
+      <div id="ruler" class="instrument glass-acrylic rounded-md hidden pointer-events-auto" style="width: 480px; height: 80px; top: 0; left: 0; transform-origin: center center;">
+        <canvas id="rulerCanvas" class="w-full h-full"></canvas>
+<div class="handle rotate-handle -top-3.5 -right-3.5" data-action="rotate" title="Döndür"></div>
+        <div class="handle resize-handle -bottom-3.5 -right-3.5" data-action="resize" title="Uzunluğu Ayarla"></div>
+      </div>
+
+      <!-- İLETKİ / AÇIÖLÇER -->
+      <div id="protractor" class="instrument glass-acrylic rounded-t-full hidden pointer-events-auto" style="touch-action:none; user-select:none;" style="width: 380px; height: 190px; top: 180px; left: 240px;">
+        <canvas id="protractorCanvas" class="w-full h-full"></canvas>
+<div id="protractorResizeHandleLeft" class="handle resize-handle" style="left:-14px; bottom:-14px; width:28px; height:28px; background:#1e293b; border:2.5px solid #f8fafc; box-shadow:0 2px 8px rgba(0,0,0,.3); touch-action:none;" title="Boyutlandır ve Döndür (180°)"></div>
+        <div id="protractorResizeHandle" class="handle resize-handle" style="right:-14px; bottom:-14px; width:28px; height:28px; background:#1e293b; border:2.5px solid #f8fafc; box-shadow:0 2px 8px rgba(0,0,0,.3); touch-action:none;" title="Boyutlandır ve Döndür (0°)"></div>
+        <button id="btnToggle360" class="absolute bottom-2 left-3 bg-slate-900/80 text-white text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-700 shadow-sm">180° / 360°</button>
+      </div>
+
+      <!-- 45-45-90 GÖNYE -->
+      <div id="triangle45" class="instrument hidden pointer-events-auto" style="width: 290px; height: 290px; top: 0; left: 0; transform-origin: center center;">
+        <canvas id="triangle45Canvas" class="w-full h-full"></canvas>
+<div class="handle rotate-handle" data-action="rotate" style="left: -14px; bottom: -14px;" title="Dik köşeden döndür"></div>
+        <div class="handle resize-handle -bottom-3.5 -right-3.5" data-action="resize" title="Boyutlandır"></div>
+      </div>
+
+      <!-- MEKANİK PERGEL -->
+      <div id="compassContainer" class="hidden pointer-events-auto">
+        <button id="btnCompassDrawLock" type="button" title="Çizim kilidi: kilitliyken kalem sadece döner, açıkken yay çizer"
+          class="absolute z-[80] flex items-center gap-1 rounded-lg border border-slate-500/80 bg-slate-900/90 px-2 py-1 text-[10px] font-semibold text-slate-100 shadow-lg hover:bg-slate-800"
+          style="left:50%; top:8px; transform:translateX(-50%); pointer-events:auto; white-space:nowrap;">
+          <span id="compassLockIcon">🔒</span> <span id="compassLockLabel">Çizim kilitli</span>
+        </button>
+<svg id="compassSVG" width="360" height="500" viewBox="-180 -350 360 500" class="overflow-visible">
+          <defs>
+            <linearGradient id="legMetal" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#8b919a"/>
+              <stop offset="35%" stop-color="#e8eaed"/>
+              <stop offset="55%" stop-color="#f8f9fa"/>
+              <stop offset="100%" stop-color="#9ca3af"/>
+            </linearGradient>
+            <linearGradient id="legMetalDark" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#6b7280"/>
+              <stop offset="40%" stop-color="#d1d5db"/>
+              <stop offset="100%" stop-color="#4b5563"/>
+            </linearGradient>
+            <linearGradient id="hingeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#374151"/>
+              <stop offset="50%" stop-color="#1f2937"/>
+              <stop offset="100%" stop-color="#111827"/>
+            </linearGradient>
+            <linearGradient id="pencilBodyGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#9d174d"/>
+              <stop offset="40%" stop-color="#db2777"/>
+              <stop offset="100%" stop-color="#be185d"/>
+            </linearGradient>
+            <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fde68a"/>
+              <stop offset="100%" stop-color="#d97706"/>
+            </linearGradient>
+            <linearGradient id="chromeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f1f5f9"/>
+              <stop offset="45%" stop-color="#94a3b8"/>
+              <stop offset="100%" stop-color="#64748b"/>
+            </linearGradient>
+            <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0f172a" flood-opacity="0.28"/>
+            </filter>
+            <filter id="tinyShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+
+          <!-- Guides (shown while adjusting) -->
+          <circle id="compassGuideCircle" cx="0" cy="0" r="100" stroke="#2563eb" stroke-dasharray="6 5" stroke-width="1.75" fill="rgba(37,99,235,0.05)" opacity="0"/>
+          <line id="compassRadiusLine" x1="0" y1="0" x2="100" y2="0" stroke="#2563eb" stroke-dasharray="4 3" stroke-width="1.5" opacity="0"/>
+          <g id="compassInfoBadge" opacity="0" transform="translate(50, -20)">
+            <rect x="-50" y="-14" width="100" height="28" rx="14" fill="#0f172a" opacity="0.94"/>
+            <rect x="-50" y="-14" width="100" height="28" rx="14" fill="none" stroke="#3b82f6" stroke-width="1.25" opacity="0.8"/>
+            <text id="compassRadiusText" x="0" y="5" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle" font-family="Inter, system-ui, sans-serif">5.0 cm</text>
+          </g>
+
+          <g id="compassBody" stroke-linejoin="round" stroke-linecap="round" filter="url(#softShadow)">
+            <!-- Needle leg -->
+            <path id="legNeedle" d="M 60,-180 L 0,0" stroke="url(#legMetal)" stroke-width="13" fill="none"/>
+            <path id="needleHighlight" d="M 58,-168 L 2,-12" stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.55"/>
+            <!-- Needle tip -->
+            <path d="M -5,-1 L 0,16 L 5,-1 Z" fill="#1e293b"/>
+            <path d="M -2,8 L 0,16 L 2,8 Z" fill="#0f172a"/>
+
+            <!-- Pencil leg -->
+            <path id="legPencil" d="M 60,-180 L 120,0" stroke="url(#legMetal)" stroke-width="13" fill="none"/>
+            <path id="pencilHighlight" d="M 62,-168 L 117,-12" stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.55"/>
+
+            <!-- Cross bar / thumb screw -->
+            <g id="thumbScrewGroup">
+              <path id="screwShaft" d="M 30,-108 L 90,-108" stroke="url(#legMetalDark)" stroke-width="11" fill="none"/>
+              <path id="screwShaftHighlight" d="M 32,-108 L 88,-108" stroke="#f8fafc" stroke-width="3" fill="none" opacity="0.45"/>
+              <circle id="screwNut" cx="60" cy="-108" r="7.5" fill="url(#hingeGrad)" filter="url(#tinyShadow)"/>
+              <circle id="screwNutInner" cx="60" cy="-108" r="2.8" fill="#cbd5e1"/>
+              <circle cx="60" cy="-108" r="1.1" fill="#475569"/>
+            </g>
+
+            <!-- Pencil head -->
+            <g id="pencilAssembly" class="cursor-grab active:cursor-grabbing" transform="translate(120, 0)" style="pointer-events:all;">
+              <rect x="-20" y="-54" width="40" height="76" fill="transparent"/>
+              <!-- barrel -->
+              <rect x="-12" y="-48" width="24" height="42" rx="3" fill="url(#pencilBodyGrad)" filter="url(#tinyShadow)"/>
+              <rect x="-12" y="-48" width="7" height="42" rx="2" fill="#ffffff" opacity="0.18"/>
+              <!-- ferrule -->
+              <rect x="-13" y="-10" width="26" height="8" rx="1.5" fill="url(#chromeGrad)"/>
+              <line x1="-11" y1="-7" x2="11" y2="-7" stroke="#e2e8f0" stroke-width="0.8" opacity="0.7"/>
+              <line x1="-11" y1="-4" x2="11" y2="-4" stroke="#64748b" stroke-width="0.6" opacity="0.5"/>
+              <!-- wood cone -->
+              <path d="M -12,-2 L 0,18 L 12,-2 Z" fill="url(#woodGrad)"/>
+              <path d="M -5,8 L 0,18 L 5,8 Z" fill="#334155"/>
+              <path d="M -2,13 L 0,18 L 2,13 Z" fill="#0f172a"/>
+              <!-- active ring -->
+              <circle id="pencilActiveRing" cx="0" cy="2" r="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3" opacity="0"/>
+            </g>
+
+            <!-- Pivot / hinge head -->
+            <circle id="compassPivotOuter" cx="60" cy="-180" r="11" fill="url(#hingeGrad)" filter="url(#tinyShadow)"/>
+            <circle id="compassPivotMiddle" cx="60" cy="-180" r="5.5" fill="#e2e8f0"/>
+            <circle id="compassPivotInner" cx="60" cy="-180" r="2" fill="#1e293b"/>
+
+            <!-- Top rotation handle (draws arcs) -->
+            <g id="topRotationHandle" class="cursor-grab active:cursor-grabbing">
+              <rect x="40" y="-214" width="40" height="44" rx="6" fill="url(#hingeGrad)" filter="url(#tinyShadow)"/>
+              <rect x="50" y="-232" width="20" height="24" rx="4" fill="url(#hingeGrad)"/>
+              <rect x="44" y="-208" width="32" height="6" rx="2" fill="#475569" opacity="0.5"/>
+              <rect x="44" y="-198" width="32" height="6" rx="2" fill="#475569" opacity="0.5"/>
+              <rect x="44" y="-188" width="32" height="6" rx="2" fill="#475569" opacity="0.5"/>
+              <circle cx="60" cy="-180" r="5" fill="#e2e8f0"/>
+              <circle cx="60" cy="-180" r="2" fill="#1e293b"/>
+            </g>
+
+            <!-- Radius handle (invisible until adjusting) -->
+            <g id="radiusHandle" class="cursor-ew-resize" opacity="0">
+              <circle id="radiusHandleCircle" cx="120" cy="0" r="12" fill="#ffffff" stroke="#2563eb" stroke-width="2.5" filter="url(#tinyShadow)"/>
+              <circle cx="120" cy="0" r="3.5" fill="#2563eb"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- 4. ALT ORTADA YÜZEN KALEM, RENK VE SAYFA PANELİ -->
+<div id="bottomPalette" class="fixed bottom-2 left-[calc(50%+120px)] -translate-x-1/2 scale-75 origin-bottom bg-slate-900/90 text-white border border-slate-700/80 rounded-xl px-1.5 py-1.1 flex items-center gap-2 z-50 shadow-2xl backdrop-blur-lg">
+    
+    <!-- Sayfa Yönetimi -->
+    <div class="flex items-center gap-1 bg-slate-800/90 px-1.5 py-0.5 rounded-lg border border-slate-700/60">
+      <button id="btnPrevBoardPage" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Önceki Tahta Sayfası">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+      <span id="boardPageIndicator" class="text-xs font-mono px-1">1/1</span>
+      <button id="btnNextBoardPage" class="p-1 hover:bg-slate-700 rounded text-slate-300 transition" title="Sonraki Tahta Sayfası">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+      <button id="btnAddBoardPage" class="p-1 bg-indigo-600 hover:bg-indigo-500 rounded text-white transition ml-1" title="Yeni Sayfa Ekle">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+      </button>
+      <button id="btnDeleteBoardPage" class="p-1 hover:bg-rose-900/60 text-rose-400 rounded transition" title="Sayfayı Sil">
+        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+
+    <div class="h-6 w-px bg-slate-700"></div>
+
+    <!-- Çizim Modları (Kalem, Fosforlu, Silgi) -->
+    <div class="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700/60">
+      <button id="btnHand" class="draw-tool p-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5" title="Ekranı tut ve taşı">
+        <i data-lucide="hand" class="w-4 h-4"></i>
+        <span>Ekranı Tut</span>
+      </button>
+      <button id="btnPen" class="draw-tool active p-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow transition flex items-center gap-1.5">
+        <i data-lucide="pen-tool" class="w-4 h-4"></i>
+        <span>Kalem</span>
+      </button>
+      <button id="btnHighlighter" class="draw-tool p-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5">
+        <i data-lucide="highlighter" class="w-4 h-4"></i>
+        <span>Fosforlu</span>
+      </button>
+      <button id="btnEraser" class="draw-tool p-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5">
+        <i data-lucide="eraser" class="w-4 h-4"></i>
+        <span>Silgi</span>
+      </button>
+    </div>
+
+    <div class="h-6 w-px bg-slate-700"></div>
+
+    <!-- Renk Paleti -->
+    <div class="flex items-center gap-1.5">
+      <button data-color="#000000" class="color-preset w-6 h-6 rounded-full bg-black ring-2 ring-indigo-500 scale-110 transition shadow-sm"></button>
+      <button data-color="#dc2626" class="color-preset w-6 h-6 rounded-full bg-red-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#2563eb" class="color-preset w-6 h-6 rounded-full bg-blue-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#16a34a" class="color-preset w-6 h-6 rounded-full bg-green-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#ca8a04" class="color-preset w-6 h-6 rounded-full bg-yellow-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#ea580c" class="color-preset w-6 h-6 rounded-full bg-orange-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#9333ea" class="color-preset w-6 h-6 rounded-full bg-purple-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#db2777" class="color-preset w-6 h-6 rounded-full bg-pink-600 ring-2 ring-transparent hover:scale-110 transition shadow-sm"></button>
+      <button data-color="#ffffff" class="color-preset w-6 h-6 rounded-full bg-white border border-slate-400 ring-2 ring-transparent hover:scale-110 transition shadow-sm" title="Beyaz"></button>
+
+      <!-- Özel Renk Seçici -->
+      <div class="relative flex items-center justify-center w-7 h-7 rounded-full overflow-hidden border border-slate-600 cursor-pointer hover:scale-110 transition ml-1" title="Özel Renk Seç">
+        <input type="color" id="penColor" value="#000000" class="absolute -top-2 -left-2 w-12 h-12 cursor-pointer bg-transparent border-0">
+      </div>
+    </div>
+
+    <div class="h-6 w-px bg-slate-700"></div>
+
+    <!-- Kalem Kalınlık Slider -->
+<div class="flex items-center gap-1.5">
+  <i data-lucide="circle-dot" class="w-4 h-4 text-slate-400"></i>
+  <button id="penWidthMinus" type="button"
+    class="w-5 h-5 flex items-center justify-center rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium transition-colors">
+    −
+  </button>
+  <input type="range" id="penWidth" min="1" max="50" value="4"
+    class="w-20 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+  <span id="widthValue" class="text-xs font-mono text-slate-300 w-5 text-center">4</span>
+  <button id="penWidthPlus" type="button"
+    class="w-5 h-5 flex items-center justify-center rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium transition-colors">
+    +
+  </button>
+</div>
+ 
+  </div>
+
+  <script>   
+
+
+
+// Tam ekran (F11 veya buton)
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log('Tam ekran hatası:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Sayfa yüklendiğinde otomatik tam ekran denemesi (isteğe bağlı)
+    // window.addEventListener('load', () => {
+    //   setTimeout(toggleFullscreen, 500);
+    // });
+
+    // Fare imlecini gizle (akıllı tahta için kullanışlı)
+    let timeout;
+    document.addEventListener('mousemove', () => {
+      document.body.style.cursor = 'default';
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        document.body.style.cursor = 'none';
+      }, 3000);
+    });
+
+   
+
+
+
+
+
+
+
+
+
+   
+document.addEventListener('DOMContentLoaded', () => {
+  const range = document.getElementById('penWidth');
+  const widthValue = document.getElementById('widthValue');
+  const minusBtn = document.getElementById('penWidthMinus');
+  const plusBtn = document.getElementById('penWidthPlus');
+
+  if (!range || !widthValue || !minusBtn || !plusBtn) {
+    console.error('Pen width elementleri bulunamadı!');
+    return;
+  }
+
+  function updateWidth(value) {
+    const val = Math.max(1, Math.min(50, Number(value) || 1));
+    
+    // Slider + sayı + kalem kalınlığı hep birlikte
+    range.value = val;
+    widthValue.textContent = val;
+    
+    // Çizim motorundaki değişkeni güncelle
+    // (senin projedeki gerçek değişken adını yaz)
+    if (typeof currentPenWidth !== 'undefined') {
+      currentPenWidth = val;
+    } else if (typeof penWidth !== 'undefined') {
+      penWidth = val;
+    } else if (typeof brushSize !== 'undefined') {
+      brushSize = val;
+    }
+    
+    // Butonları sınırlarda kilitle
+    minusBtn.disabled = val <= 1;
+    plusBtn.disabled = val >= 50;
+  }
+
+  // Slider sürüklenince
+  range.addEventListener('input', (e) => {
+    updateWidth(e.target.value);
+  });
+
+  // Eksi butonu
+  minusBtn.addEventListener('click', () => {
+    updateWidth(Number(range.value) - 1);
+  });
+
+  // Artı butonu
+  plusBtn.addEventListener('click', () => {
+    updateWidth(Number(range.value) + 1);
+  });
+
+  // Başlangıç değeri
+  updateWidth(range.value);
+});
+   
+    // Uygulama Durumu
+    const state = {
+      pdfDoc: null,
+      pageNum: 1,
+      zoomScale: 1.0,
+
+      // Çoklu Sayfa Yönetimi
+      activeBoardPage: 0,
+      boardPages: [
+        { history: [], redoStack: [], imageElements: [] }
+      ],
+      
+      // Çizim Motoru
+      isDrawing: false,
+      activePointerId: null, // Akıllı tahta: tek parmak kilidi — başka yere dokununca çizim bozulmaz
+      globalPointerLock: null, // Tüm uygulama genelinde tek aktif pointer
+      currentTool: 'pen',
+      isPanning: false,
+      panStart: null,
+      panOffsets: { pdfCanvas: [0, 0], drawCanvas: [0, 0], imageLayer: [0, 0], instrumentsLayer: [0, 0] },
+      selectedShape: 'free',
+      penColor: '#000000',
+      penWidth: 4, // Akıllı tahtada parmakla daha rahat görünmesi için varsayılan 4
+      
+      // Metin Ayarları
+      isBold: false,
+      isItalic: false,
+      pendingTextPos: null,
+
+      // Geçmiş Limit (akıllı tahtada bellek için biraz düşürüldü)
+      maxHistory: 20,
+      shapeStart: null,
+      anglePoints: [],
+      polygonSides: 5,
+
+      // Geometri Araçları
+      instruments: {
+        ruler: { x: 160, y: 100, angle: 0, width: 480, visible: false },
+        protractor: { x: 400, y: 300, angle: 0, radius: 190, mode360: false, visible: false },
+        triangle45: { x: 340, y: 140, angle: 0, visible: false },
+      },
+
+      // Pergel Durumu
+      compass: {
+        x: 400,
+        y: 300,
+        radius: 150,
+        angle: 0,
+        visible: false,
+        drawLocked: true
+      }
+    };
+
+    // DOM Bağlantıları
+    const workspace = document.getElementById('workspace');
+    const pdfCanvas = document.getElementById('pdfCanvas');
+    const pdfCtx = pdfCanvas.getContext('2d');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    const imageLayer = document.getElementById('imageLayer');
+
+    // Geçmiş Kaydı ve Geri/İleri Alma
+    function saveCanvasState() {
+      const page = state.boardPages[state.activeBoardPage];
+      if (page.history.length >= state.maxHistory) page.history.shift();
+      page.history.push(drawCanvas.toDataURL());
+      page.redoStack = [];
+    }
+
+    function restoreCanvasState(dataUrl) {
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.drawImage(img, 0, 0);
+      };
+    }
+
+    document.getElementById('btnUndo').addEventListener('click', () => {
+      const page = state.boardPages[state.activeBoardPage];
+      if (page.history.length > 0) {
+        page.redoStack.push(drawCanvas.toDataURL());
+        const previousState = page.history.pop();
+        restoreCanvasState(previousState);
+      }
+    });
+
+    document.getElementById('btnRedo').addEventListener('click', () => {
+      const page = state.boardPages[state.activeBoardPage];
+      if (page.redoStack.length > 0) {
+        page.history.push(drawCanvas.toDataURL());
+        const nextState = page.redoStack.pop();
+        restoreCanvasState(nextState);
+      }
+    });
+
+    // 1. Çoklu Sayfa Yönetimi Fonksiyonları
+    function updatePageIndicator() {
+      document.getElementById('boardPageIndicator').textContent = `${state.activeBoardPage + 1}/${state.boardPages.length}`;
+    }
+
+    function switchBoardPage(index) {
+      if (index < 0 || index >= state.boardPages.length) return;
+      state.activeBoardPage = index;
+      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      
+      const page = state.boardPages[state.activeBoardPage];
+      if (page.history.length > 0) {
+        restoreCanvasState(page.history[page.history.length - 1]);
+      }
+      updatePageIndicator();
+    }
+
+    document.getElementById('btnAddBoardPage').addEventListener('click', () => {
+      state.boardPages.push({ history: [], redoStack: [], imageElements: [] });
+      switchBoardPage(state.boardPages.length - 1);
+    });
+
+    document.getElementById('btnPrevBoardPage').addEventListener('click', () => {
+      switchBoardPage(state.activeBoardPage - 1);
+    });
+
+    document.getElementById('btnNextBoardPage').addEventListener('click', () => {
+      switchBoardPage(state.activeBoardPage + 1);
+    });
+
+    document.getElementById('btnDeleteBoardPage').addEventListener('click', () => {
+      if (state.boardPages.length <= 1) {
+        saveCanvasState();
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        return;
+      }
+      state.boardPages.splice(state.activeBoardPage, 1);
+      const newIndex = Math.max(0, state.activeBoardPage - 1);
+      switchBoardPage(newIndex);
+    });
+
+    // Tuval Yeniden Boyutlandırma
+    let canvasLogicalSize = null;
+
+    // Çizim tuvali orijini (workspace CSS). PDF zoom ile genişler / hizalanır.
+    if (typeof state.drawOrigin === 'undefined') state.drawOrigin = { x: 0, y: 0 };
+    if (typeof state.pdfLayout === 'undefined') state.pdfLayout = null; // {left, top, w, h}
+
+    function getDrawCoverageRect() {
+      const w = workspace.clientWidth || 1;
+      const h = workspace.clientHeight || 1;
+      let x0 = 0, y0 = 0, x1 = w, y1 = h;
+      if (state.pdfDoc && pdfCanvas && pdfCanvas.width > 1) {
+        const pdfLeft = parseFloat(pdfCanvas.style.left) || 0;
+        const pdfTop = parseFloat(pdfCanvas.style.top) || 0;
+        const pdfW = pdfCanvas.width;
+        const pdfH = pdfCanvas.height;
+        const pad = 160;
+        // PDF'nin tamamı + görünür alan
+        x0 = Math.min(0, pdfLeft) - pad;
+        y0 = Math.min(0, pdfTop) - pad;
+        x1 = Math.max(w, pdfLeft + pdfW) + pad;
+        y1 = Math.max(h, pdfTop + pdfH) + pad;
+      }
+      let cssW = Math.ceil(x1 - x0);
+      let cssH = Math.ceil(y1 - y0);
+      // Tarayıcı güvenli tavan (çok yüksek zoom'da dpr düşürülerek PDF yine kapsanır)
+      const MAX = 16384;
+      cssW = Math.min(Math.max(cssW, w), MAX);
+      cssH = Math.min(Math.max(cssH, h), MAX);
+      return { x0, y0, cssW, cssH };
+    }
+
+    function applyDrawCanvasGeometry(x0, y0, cssW, cssH, oldOrigin, oldCanvas, pdfScaleInfo) {
+      // Akıllı tahta: büyük alanda dpr düşür → bellek ve kasma azalır, yazı net kalır
+      let dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+      while (cssW * dpr > 12288 || cssH * dpr > 12288) {
+        if (dpr <= 1) break;
+        dpr = Math.max(1, dpr - 0.5);
+      }
+      if (cssW * dpr > 12288) { cssW = Math.floor(12288 / dpr); }
+      if (cssH * dpr > 12288) { cssH = Math.floor(12288 / dpr); }
+
+      const bufW = Math.max(1, Math.round(cssW * dpr));
+      const bufH = Math.max(1, Math.round(cssH * dpr));
+      drawCanvas.width = bufW;
+      drawCanvas.height = bufH;
+      drawCanvas.style.width = `${bufW / dpr}px`;
+      drawCanvas.style.height = `${bufH / dpr}px`;
+      drawCanvas.style.left = `${x0}px`;
+      drawCanvas.style.top = `${y0}px`;
+      drawCanvas.style.maxWidth = 'none';
+      drawCanvas.style.maxHeight = 'none';
+      drawCtx.setTransform(1, 0, 0, 1, 0, 0);
+      drawCtx.imageSmoothingEnabled = true;
+      drawCtx.clearRect(0, 0, bufW, bufH);
+
+      if (oldCanvas && oldCanvas.width && oldCanvas.height) {
+        const ox = (oldOrigin && typeof oldOrigin.x === 'number') ? oldOrigin.x : 0;
+        const oy = (oldOrigin && typeof oldOrigin.y === 'number') ? oldOrigin.y : 0;
+        if (pdfScaleInfo && pdfScaleInfo.oldW > 0 && pdfScaleInfo.newW > 0) {
+          // Zoom: eski çizimleri PDF ile birlikte ölçekle ve yeni konuma yerleştir
+          const sx = pdfScaleInfo.newW / pdfScaleInfo.oldW;
+          const sy = pdfScaleInfo.newH / pdfScaleInfo.oldH;
+          // Eski tuval CSS boyutu
+          const oldCssW = oldCanvas.width / (oldCanvas._dpr || dpr);
+          const oldCssH = oldCanvas.height / (oldCanvas._dpr || dpr);
+          // Eski içeriğin workspace'teki konumu (ox, oy), yeni ölçek + yeni PDF sol-üst
+          // Nokta: world = ox + local; local relative to old PDF → new
+          const oldPdfL = pdfScaleInfo.oldL, oldPdfT = pdfScaleInfo.oldT;
+          const newPdfL = pdfScaleInfo.newL, newPdfT = pdfScaleInfo.newT;
+          // drawImage ile: önce eski bitmap'i eski orijine göre, ölçekleyerek yeni PDF hizasına
+          // Hedef: eski world noktası P → newP = newPdfL + (P - oldPdfL) * sx
+          // Canvas'ta hedef local = newP - x0
+          const destX = (newPdfL + (ox - oldPdfL) * sx - x0) * dpr;
+          const destY = (newPdfT + (oy - oldPdfT) * sy - y0) * dpr;
+          const destW = oldCanvas.width * sx * (dpr / (oldCanvas._dpr || dpr));
+          const destH = oldCanvas.height * sy * (dpr / (oldCanvas._dpr || dpr));
+          try {
+            drawCtx.drawImage(oldCanvas, destX, destY, destW, destH);
+          } catch (_) {
+            drawCtx.drawImage(oldCanvas, (ox - x0) * dpr, (oy - y0) * dpr);
+          }
+        } else {
+          const dx = (ox - x0) * dpr;
+          const dy = (oy - y0) * dpr;
+          try { drawCtx.drawImage(oldCanvas, dx, dy); } catch (_) {}
+        }
+      }
+      state.drawOrigin = { x: x0, y: y0 };
+      drawCanvas._dpr = dpr;
+    }
+
+    function ensureDrawCanvasCoversContent() {
+      const cov = getDrawCoverageRect();
+      const curW = parseFloat(drawCanvas.style.width) || 0;
+      const curH = parseFloat(drawCanvas.style.height) || 0;
+      const curL = parseFloat(drawCanvas.style.left) || 0;
+      const curT = parseFloat(drawCanvas.style.top) || 0;
+
+      // PDF layout değişimi (zoom) → çizimleri ölçekle
+      let pdfScaleInfo = null;
+      if (state.pdfDoc && pdfCanvas && pdfCanvas.width > 1) {
+        const newLayout = {
+          left: parseFloat(pdfCanvas.style.left) || 0,
+          top: parseFloat(pdfCanvas.style.top) || 0,
+          w: pdfCanvas.width,
+          h: pdfCanvas.height
+        };
+        const old = state.pdfLayout;
+        if (old && old.w > 0 && (Math.abs(old.w - newLayout.w) > 1 || Math.abs(old.h - newLayout.h) > 1 ||
+            Math.abs(old.left - newLayout.left) > 1 || Math.abs(old.top - newLayout.top) > 1)) {
+          pdfScaleInfo = {
+            oldL: old.left, oldT: old.top, oldW: old.w, oldH: old.h,
+            newL: newLayout.left, newT: newLayout.top, newW: newLayout.w, newH: newLayout.h
+          };
+        }
+        state.pdfLayout = newLayout;
+      } else {
+        state.pdfLayout = null;
+      }
+
+      const need =
+        !!pdfScaleInfo ||
+        cov.cssW > curW + 1 || cov.cssH > curH + 1 ||
+        cov.x0 < curL - 1 || cov.y0 < curT - 1 ||
+        (cov.x0 + cov.cssW) > (curL + curW + 1) ||
+        (cov.y0 + cov.cssH) > (curT + curH + 1) ||
+        !drawCanvas.width;
+
+      if (!need) return;
+
+      const oldOrigin = { x: state.drawOrigin?.x || curL, y: state.drawOrigin?.y || curT };
+      const oldCanvas = document.createElement('canvas');
+      oldCanvas.width = drawCanvas.width;
+      oldCanvas.height = drawCanvas.height;
+      oldCanvas._dpr = drawCanvas._dpr || Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      if (drawCanvas.width && drawCanvas.height) {
+        try { oldCanvas.getContext('2d').drawImage(drawCanvas, 0, 0); } catch (_) {}
+      }
+      applyDrawCanvasGeometry(cov.x0, cov.y0, cov.cssW, cov.cssH, oldOrigin, oldCanvas, pdfScaleInfo);
+    }
+
+    function resizeCanvases() {
+      const w = workspace.clientWidth;
+      const h = workspace.clientHeight;
+      if (!w || !h) return;
+
+      const oldOrigin = { x: state.drawOrigin?.x || 0, y: state.drawOrigin?.y || 0 };
+      const oldCanvas = document.createElement('canvas');
+      oldCanvas.width = drawCanvas.width;
+      oldCanvas.height = drawCanvas.height;
+      if (drawCanvas.width && drawCanvas.height) {
+        try { oldCanvas.getContext('2d').drawImage(drawCanvas, 0, 0); } catch (_) {}
+      }
+
+      // Önce PDF varsa yeniden çiz (boyut/konum güncellenir), sonra çizim tuvalini PDF'yi kapsayacak şekilde ayarla
+      if (state.pdfDoc) {
+        renderPdfPage(state.pageNum);
+      } else {
+        const cov = getDrawCoverageRect();
+        applyDrawCanvasGeometry(cov.x0, cov.y0, cov.cssW, cov.cssH, oldOrigin, oldCanvas);
+      }
+
+      renderRulerGraphics();
+      renderProtractorGraphics();
+      updateProtractorTransform();
+      renderTriangle45Graphics();
+      updateCompassTransform();
+    }
+
+    window.addEventListener('resize', resizeCanvases);
+    lucide.createIcons();
+
+    // PDF Yükleme
+    const pdfInput = document.getElementById('pdfInput');
+    const pdfControls = document.getElementById('pdfControls');
+    const pageNumInput = document.getElementById('pageNum');
+    const pageCountSpan = document.getElementById('pageCount');
+
+    pdfInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && file.type === 'application/pdf') {
+        const fileReader = new FileReader();
+        fileReader.onload = function() {
+          const typedarray = new Uint8Array(this.result);
+          pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+            state.pdfDoc = pdf;
+            pageCountSpan.textContent = `/ ${pdf.numPages}`;
+            pdfControls.classList.remove('hidden');
+            document.getElementById('pdfCloseButton').classList.remove('hidden');
+            document.getElementById('pdfCloseButton').classList.add('flex');
+            state.pageNum = 1;
+            pageNumInput.value = 1;
+            renderPdfPage(1);
+          });
+        };
+        fileReader.readAsArrayBuffer(file);
+      }
+    });
+
+    let pdfRenderToken = 0;
+    let activePdfRenderTask = null;
+
+    function renderPdfPage(num) {
+      if (!state.pdfDoc) return;
+      const token = ++pdfRenderToken;
+      state.pdfDoc.getPage(num).then((page) => {
+        if (token !== pdfRenderToken) return;
+        const unscaledViewport = page.getViewport({ scale: 1, rotation: 0 });
+        const baseScale = Math.min(workspace.clientWidth / unscaledViewport.width, workspace.clientHeight / unscaledViewport.height) * 0.95;
+        const finalScale = baseScale * state.zoomScale;
+        // PDF'nin kendi /Rotate bilgisini yok say: sayfalar her zaman dik ve tutarlı açıyla açılır.
+        const viewport = page.getViewport({ scale: finalScale, rotation: 0 });
+
+        pdfCanvas.width = Math.ceil(viewport.width);
+        pdfCanvas.height = Math.ceil(viewport.height);
+        pdfCanvas.style.left = `${(workspace.clientWidth - viewport.width) / 2}px`;
+        pdfCanvas.style.top = `${(workspace.clientHeight - viewport.height) / 2}px`;
+        pdfCanvas.style.transform = 'none';
+
+        if (activePdfRenderTask) {
+          try { activePdfRenderTask.cancel(); } catch (_) {}
+        }
+        activePdfRenderTask = page.render({ canvasContext: pdfCtx, viewport: viewport });
+        activePdfRenderTask.promise.catch(err => {
+          if (err && err.name !== 'RenderingCancelledException') console.error(err);
+        });
+        document.getElementById('zoomLevel').textContent = `${Math.round(state.zoomScale * 100)}%`;
+        // PDF yüklendi / büyütüldü: çizim tuvalini PDF'nin tamamını kapsayacak şekilde hizala
+        ensureDrawCanvasCoversContent();
+      });
+    }
+
+    function closePdf() {
+      pdfRenderToken++;
+      if (activePdfRenderTask) { try { activePdfRenderTask.cancel(); } catch (_) {} activePdfRenderTask = null; }
+      state.pdfDoc = null;
+      pdfCtx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+      pdfCanvas.width = 1;
+      pdfCanvas.height = 1;
+      pdfCanvas.style.left = '0px';
+      pdfCanvas.style.top = '0px';
+      pdfControls.classList.add('hidden');
+      document.getElementById('pdfCloseButton').classList.add('hidden');
+      pdfInput.value = '';
+      state.pageNum = 1;
+      state.zoomScale = 1;
+      document.getElementById('zoomLevel').textContent = '100%';
+      // Çizim tuvalini workspace boyutuna geri al
+      state.drawOrigin = { x: 0, y: 0 };
+      try { ensureDrawCanvasCoversContent(); } catch (_) {}
+    }
+    document.getElementById('pdfCloseButton').addEventListener('click', closePdf);
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (state.pageNum <= 1) return;
+      state.pageNum--;
+      pageNumInput.value = state.pageNum;
+      renderPdfPage(state.pageNum);
+    });
+
+    document.getElementById('nextPage').addEventListener('click', () => {
+      if (!state.pdfDoc || state.pageNum >= state.pdfDoc.numPages) return;
+      state.pageNum++;
+      pageNumInput.value = state.pageNum;
+      renderPdfPage(state.pageNum);
+    });
+
+    pageNumInput.addEventListener('change', (e) => {
+      let val = parseInt(e.target.value);
+      if (state.pdfDoc && val >= 1 && val <= state.pdfDoc.numPages) {
+        state.pageNum = val;
+        renderPdfPage(val);
+      }
+    });
+
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      // Sınırsıza yakın büyütme
+      if (state.zoomScale < 50) {
+        state.zoomScale = Math.min(50, state.zoomScale * 1.25);
+        renderPdfPage(state.pageNum);
+      }
+    });
+
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      if (state.zoomScale > 0.15) {
+        state.zoomScale = Math.max(0.15, state.zoomScale / 1.25);
+        renderPdfPage(state.pageNum);
+      }
+    });
+
+    // Ctrl + tekerlek ile PDF zoom (yazma alanı otomatik genişler)
+    workspace.addEventListener('wheel', (e) => {
+      if (!state.pdfDoc) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        state.zoomScale = Math.min(50, state.zoomScale * 1.12);
+      } else {
+        state.zoomScale = Math.max(0.15, state.zoomScale / 1.12);
+      }
+      renderPdfPage(state.pageNum);
+    }, { passive: false });
+
+    // 2. Resim Yükleme ve Etkileşim
+    const imageInput = document.getElementById('imageInput');
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          createInteractiveImage(evt.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function createInteractiveImage(src) {
+      const container = document.createElement('div');
+      container.className = 'placed-image-container pointer-events-auto active';
+      container.style.left = '200px';
+      container.style.top = '150px';
+      container.style.width = '250px';
+
+      const img = document.createElement('img');
+      img.src = src;
+      img.className = 'w-full h-auto pointer-events-none select-none rounded shadow-md';
+      
+      const rotateHandle = document.createElement('div');
+      rotateHandle.className = 'handle rotate-handle -top-3.5 -right-3.5';
+      rotateHandle.title = 'Döndür';
+
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'handle resize-handle -bottom-3.5 -right-3.5';
+      resizeHandle.title = 'Boyutlandır';
+
+      const deleteHandle = document.createElement('div');
+      deleteHandle.className = 'handle delete-handle -top-3.5 -left-3.5';
+      deleteHandle.title = 'Sil';
+
+      const bgBtn = document.createElement('button');
+      bgBtn.type = 'button';
+      bgBtn.className = 'img-bg-btn';
+      bgBtn.title = 'Bu resmi mevcut boyutta tahta arka planı yap';
+      bgBtn.textContent = 'Arka plan yap';
+
+      function applyImageAsBackground() {
+        const wsRect = workspace.getBoundingClientRect();
+        const cRect = container.getBoundingClientRect();
+        // Pan ofsetini hesaba kat (tahta kaydırılmış olabilir)
+        const panX = (state.panOffsets && state.panOffsets.imageLayer) ? state.panOffsets.imageLayer[0] : 0;
+        const panY = (state.panOffsets && state.panOffsets.imageLayer) ? state.panOffsets.imageLayer[1] : 0;
+        const left = cRect.left - wsRect.left - panX;
+        const top = cRect.top - wsRect.top - panY;
+        const w = Math.max(1, Math.round(cRect.width));
+        const h = Math.max(1, Math.round(cRect.height || (w * (img.naturalHeight / (img.naturalWidth || 1)))));
+        workspace.style.backgroundColor = '#ffffff';
+        workspace.style.backgroundImage = `url(${src})`;
+        workspace.style.backgroundRepeat = 'no-repeat';
+        workspace.style.backgroundPosition = `${left}px ${top}px`;
+        workspace.style.backgroundSize = `${w}px ${h}px`;
+        workspace.className = 'relative flex-1 board-bg overflow-hidden';
+        // Grid sınıflarını temizle ki arka plan görünsün
+        workspace.classList.remove('grid-graph', 'grid-dots', 'grid-isometric');
+      }
+
+      // Tüm cihazlar: pointerup (dokunmatik + mouse). click yedek.
+      // pointerdown'da sadece yayılmayı kes; sürükleme başlamasın.
+      bgBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      bgBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applyImageAsBackground();
+      });
+      bgBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applyImageAsBackground();
+      });
+
+      container.appendChild(img);
+      container.appendChild(rotateHandle);
+      container.appendChild(resizeHandle);
+      container.appendChild(deleteHandle);
+      container.appendChild(bgBtn);
+      imageLayer.appendChild(container);
+
+      let isDragging = false, isRotating = false, isResizing = false;
+      let startX, startY, startWidth, currentAngle = 0;
+
+      deleteHandle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        container.remove();
+      });
+
+      container.addEventListener('pointerdown', (e) => {
+        // Buton / silme tutamacına dokunulduysa sürükleme başlatma
+        if (e.target === bgBtn || e.target.closest('.img-bg-btn') ||
+            e.target === deleteHandle || e.target.closest('.delete-handle')) {
+          return;
+        }
+        e.stopPropagation();
+        if (e.target === rotateHandle || e.target.closest('.rotate-handle')) {
+          isRotating = true;
+        } else if (e.target === resizeHandle || e.target.closest('.resize-handle')) {
+          isResizing = true;
+          startWidth = container.offsetWidth;
+        } else {
+          isDragging = true;
+        }
+        startX = e.clientX;
+        startY = e.clientY;
+        try { container.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+
+      container.addEventListener('pointermove', (e) => {
+        if (isDragging) {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          container.style.left = `${container.offsetLeft + dx}px`;
+          container.style.top = `${container.offsetTop + dy}px`;
+          startX = e.clientX;
+          startY = e.clientY;
+        } else if (isRotating) {
+          const rect = container.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const rad = Math.atan2(e.clientY - cy, e.clientX - cx);
+          currentAngle = rad * (180 / Math.PI);
+          container.style.transform = `rotate(${currentAngle}deg)`;
+        } else if (isResizing) {
+          const dx = e.clientX - startX;
+          container.style.width = `${Math.max(80, startWidth + dx)}px`;
+        }
+      });
+
+      container.addEventListener('pointerup', (e) => {
+        isDragging = isRotating = isResizing = false;
+        try { container.releasePointerCapture(e.pointerId); } catch(err){}
+      });
+      container.addEventListener('pointercancel', (e) => {
+        isDragging = isRotating = isResizing = false;
+        try { container.releasePointerCapture(e.pointerId); } catch(err){}
+      });
+    }
+
+    // 3. Metin (Text) Ekleyici Kurulumu
+    const textInputBox = document.getElementById('textInputBox');
+    const textContent = document.getElementById('textContent');
+    const fontSizeInput = document.getElementById('fontSizeInput');
+    const btnBold = document.getElementById('btnBold');
+    const btnItalic = document.getElementById('btnItalic');
+    const btnApplyText = document.getElementById('btnApplyText');
+
+    btnBold.addEventListener('click', () => {
+      state.isBold = !state.isBold;
+      btnBold.classList.toggle('bg-indigo-600', state.isBold);
+    });
+
+    btnItalic.addEventListener('click', () => {
+      state.isItalic = !state.isItalic;
+      btnItalic.classList.toggle('bg-indigo-600', state.isItalic);
+    });
+
+    btnApplyText.addEventListener('click', () => {
+      if (!state.pendingTextPos || !textContent.value.trim()) {
+        textInputBox.classList.add('hidden');
+        return;
+      }
+      saveCanvasState();
+      const textDpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      drawCtx.font = `${state.isItalic ? 'italic ' : ''}${state.isBold ? 'bold ' : ''}${fontSizeInput.value * textDpr}px Inter, sans-serif`;
+      drawCtx.fillStyle = state.penColor;
+      
+      const lines = textContent.value.split('\n');
+      const lineHeight = parseInt(fontSizeInput.value) * textDpr * 1.2;
+      lines.forEach((line, i) => {
+        drawCtx.fillText(line, state.pendingTextPos.x, state.pendingTextPos.y + (i * lineHeight));
+      });
+
+      textContent.value = '';
+      textInputBox.classList.add('hidden');
+    });
+
+    // Çizim Motoru (Pointer Events — Akıllı Tahta: tek parmak kilidi + pürüzsüz yazı)
+    let lastX = 0, lastY = 0;
+    let midX = 0, midY = 0; // Quadratic smooth için orta nokta
+    let snapshot = null;
+    let freehandRaf = null;
+    let pendingFreePos = null;
+    let strokeStarted = false;
+
+    // Global tek-parmak kilidi (akıllı tahta). Takılırsa tüm cihazlarda donma olmasın diye güvenlik serbest bırakma var.
+    let pointerLockWatchdog = null;
+    function acquirePointerLock(pointerId) {
+      if (state.globalPointerLock !== null && state.globalPointerLock !== pointerId) return false;
+      state.globalPointerLock = pointerId;
+      if (pointerLockWatchdog) clearTimeout(pointerLockWatchdog);
+      // 12 sn içinde bırakılmazsa (kayıp pointerup) kilidi aç — mobil tarayıcı koruması
+      pointerLockWatchdog = setTimeout(() => {
+        state.globalPointerLock = null;
+        state.activePointerId = null;
+        state.isDrawing = false;
+        state.isPanning = false;
+      }, 12000);
+      return true;
+    }
+    function releasePointerLock(pointerId) {
+      if (pointerId == null || state.globalPointerLock === pointerId) {
+        state.globalPointerLock = null;
+        if (pointerLockWatchdog) { clearTimeout(pointerLockWatchdog); pointerLockWatchdog = null; }
+      }
+    }
+    function forceReleaseAllPointers() {
+      state.globalPointerLock = null;
+      state.activePointerId = null;
+      state.isDrawing = false;
+      state.isPanning = false;
+      if (pointerLockWatchdog) { clearTimeout(pointerLockWatchdog); pointerLockWatchdog = null; }
+    }
+    function isPointerLocked(pointerId) {
+      return state.globalPointerLock === null || state.globalPointerLock === pointerId;
+    }
+    // Mobil/tablet: pointer kaybolursa uygulama kilitlenmesin
+    window.addEventListener('pointerup', (e) => {
+      if (state.globalPointerLock === e.pointerId) releasePointerLock(e.pointerId);
+    }, true);
+    window.addEventListener('pointercancel', (e) => {
+      if (state.globalPointerLock === e.pointerId) forceReleaseAllPointers();
+    }, true);
+    window.addEventListener('blur', forceReleaseAllPointers);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) forceReleaseAllPointers();
+    });
+
+    function getPos(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / (rect.width || 1);
+      const scaleY = drawCanvas.height / (rect.height || 1);
+      // Alt-piksel hassasiyet: yuvarlama yapmadan float kullan
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+        pressure: (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : 0.5
+      };
+    }
+
+    function canvasDpr() {
+      // Büyük tuvalde bellek/kasma için dpr'yi düşür; yazı kalitesi korunur
+      let dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+      if (drawCanvas.width > 8000 || drawCanvas.height > 8000) dpr = Math.min(dpr, 1.5);
+      if (drawCanvas.width > 12000 || drawCanvas.height > 12000) dpr = 1;
+      return dpr;
+    }
+
+    function setDrawingStyle(pressure) {
+      const dpr = canvasDpr();
+      const p = (typeof pressure === 'number') ? Math.max(0.35, Math.min(1.2, pressure * 1.4 + 0.3)) : 1;
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.imageSmoothingEnabled = true;
+      drawCtx.globalAlpha = state.currentTool === 'highlighter' ? 0.35 : 1;
+      drawCtx.globalCompositeOperation = state.currentTool === 'eraser' ? 'destination-out' : 'source-over';
+      drawCtx.strokeStyle = state.penColor;
+      const base = state.currentTool === 'eraser' ? state.penWidth * 6
+        : state.currentTool === 'highlighter' ? state.penWidth * 4
+        : state.penWidth;
+      drawCtx.lineWidth = base * dpr * p;
+    }
+
+    function flushFreehandStroke() {
+      freehandRaf = null;
+      if (!pendingFreePos || !state.isDrawing) return;
+      const pos = pendingFreePos;
+      pendingFreePos = null;
+
+      // Quadratic mid-point: pürüzsüz, kesiksiz yazı (parmak titreşimini yumuşatır)
+      const mx = (lastX + pos.x) / 2;
+      const my = (lastY + pos.y) / 2;
+      setDrawingStyle(pos.pressure);
+      drawCtx.beginPath();
+      if (!strokeStarted) {
+        drawCtx.moveTo(lastX, lastY);
+        strokeStarted = true;
+      } else {
+        drawCtx.moveTo(midX, midY);
+      }
+      drawCtx.quadraticCurveTo(lastX, lastY, mx, my);
+      drawCtx.stroke();
+      drawCtx.globalAlpha = 1.0;
+      midX = mx;
+      midY = my;
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+
+    drawCanvas.addEventListener('pointerdown', (e) => {
+      // Başka parmak zaten aktifse tamamen yok say (akıllı tahta ikincil dokunuş)
+      if (state.activePointerId !== null || !acquirePointerLock(e.pointerId)) return;
+      state.activePointerId = e.pointerId;
+      try { drawCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+
+      let pos = getPos(e);
+
+      if (state.currentTool === 'hand') {
+        state.isPanning = true;
+        state.panStart = { x: e.clientX, y: e.clientY };
+        drawCanvas.style.cursor = 'grabbing';
+        return;
+      }
+
+      if (state.selectedShape === 'text') {
+        // Metin kutusu CSS konumuna göre (canvas buffer değil)
+        const rect = drawCanvas.getBoundingClientRect();
+        const ws = workspace.getBoundingClientRect();
+        state.pendingTextPos = pos;
+        textInputBox.style.left = `${e.clientX - ws.left}px`;
+        textInputBox.style.top = `${e.clientY - ws.top}px`;
+        textInputBox.classList.remove('hidden');
+        textContent.focus();
+        // Metin için kilidi serbest bırak (kutu etkileşimi)
+        releasePointerLock(e.pointerId);
+        state.activePointerId = null;
+        return;
+      } else {
+        textInputBox.classList.add('hidden');
+      }
+
+      // Açı: 3 ayrı dokunuş
+      if (state.selectedShape === 'angle') {
+        state.anglePoints.push(pos);
+        if (state.anglePoints.length === 3) {
+          saveCanvasState();
+          drawThreePointAngle(state.anglePoints);
+          state.anglePoints = [];
+        }
+        state.isDrawing = false;
+        releasePointerLock(e.pointerId);
+        state.activePointerId = null;
+        return;
+      }
+
+      saveCanvasState();
+      state.isDrawing = true;
+      lastX = pos.x;
+      lastY = pos.y;
+      midX = pos.x;
+      midY = pos.y;
+      strokeStarted = false;
+      state.shapeStart = pos;
+      pendingFreePos = null;
+
+      // Şekil önizlemesi için snapshot (sadece şekil modunda — kasma önleme)
+      if (state.selectedShape !== 'free' && state.currentTool !== 'eraser') {
+        try {
+          snapshot = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+        } catch (err) {
+          snapshot = null;
+        }
+      } else {
+        snapshot = null;
+      }
+    });
+
+    drawCanvas.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== state.activePointerId) return; // İkincil parmak: yok say
+      e.preventDefault();
+
+      if (state.isPanning) {
+        const dx = e.clientX - state.panStart.x;
+        const dy = e.clientY - state.panStart.y;
+        ['pdfCanvas', 'drawCanvas', 'imageLayer', 'instrumentsLayer'].forEach(id => {
+          const layer = document.getElementById(id);
+          const [baseX, baseY] = state.panOffsets[id];
+          layer.style.transform = `translate(${baseX + dx}px, ${baseY + dy}px)`;
+        });
+        return;
+      }
+      if (!state.isDrawing) return;
+      let pos = getPos(e);
+
+      if (state.selectedShape !== 'free' && state.selectedShape !== 'text' && state.currentTool !== 'eraser') {
+        if (snapshot) {
+          try { drawCtx.putImageData(snapshot, 0, 0); } catch (_) {}
+        }
+        drawShapePreview(state.shapeStart, pos);
+      } else if (state.selectedShape === 'free') {
+        // rAF ile birleştir: yüksek frekanslı touch event'lerde kasma olmaz
+        pendingFreePos = pos;
+        if (!freehandRaf) {
+          freehandRaf = requestAnimationFrame(flushFreehandStroke);
+        }
+      }
+    });
+
+    function drawShapePreview(start, current) {
+      drawCtx.beginPath();
+      drawCtx.strokeStyle = state.penColor;
+      const dpr = canvasDpr();
+      drawCtx.lineWidth = state.penWidth * dpr;
+      drawCtx.globalAlpha = state.currentTool === 'highlighter' ? 0.35 : 1.0;
+      drawCtx.globalCompositeOperation = 'source-over';
+
+      const dx = current.x - start.x;
+      const dy = current.y - start.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const ux = dx / length, uy = dy / length;
+
+      if (state.selectedShape === 'line' || state.selectedShape === 'segment') {
+        drawCtx.moveTo(start.x, start.y);
+        drawCtx.lineTo(current.x, current.y);
+      } else if (state.selectedShape === 'ray') {
+        const extend = Math.max(drawCanvas.width, drawCanvas.height) * 2;
+        drawCtx.moveTo(start.x, start.y);
+        drawCtx.lineTo(start.x + ux * extend, start.y + uy * extend);
+      } else if (state.selectedShape === 'lineInfinite') {
+        const extend = Math.max(drawCanvas.width, drawCanvas.height) * 2;
+        drawCtx.moveTo(start.x - ux * extend, start.y - uy * extend);
+        drawCtx.lineTo(start.x + ux * extend, start.y + uy * extend);
+      } else if (state.selectedShape === 'arrow') {
+        drawCtx.moveTo(start.x, start.y);
+        drawCtx.lineTo(current.x, current.y);
+        const headlen = 14 * dpr;
+        const angle = Math.atan2(dy, dx);
+        drawCtx.lineTo(current.x - headlen * Math.cos(angle - Math.PI / 6), current.y - headlen * Math.sin(angle - Math.PI / 6));
+        drawCtx.moveTo(current.x, current.y);
+        drawCtx.lineTo(current.x - headlen * Math.cos(angle + Math.PI / 6), current.y - headlen * Math.sin(angle + Math.PI / 6));
+      } else if (state.selectedShape === 'circle') {
+        // Ekran pikseline göre izotropik yarıçap → tuvalde her zaman gerçek daire (elips olmaz)
+        const rect = drawCanvas.getBoundingClientRect();
+        const sx = drawCanvas.width / (rect.width || 1);
+        const sy = drawCanvas.height / (rect.height || 1);
+        const s = (Math.abs(sx) + Math.abs(sy)) / 2 || 1;
+        const rScreen = Math.hypot(dx / (sx || 1), dy / (sy || 1));
+        const r = Math.max(0.5, rScreen * s);
+        drawCtx.arc(start.x, start.y, r, 0, Math.PI * 2);
+      } else if (state.selectedShape === 'rect') {
+        drawCtx.rect(start.x, start.y, dx, dy);
+      } else if (state.selectedShape === 'polygon') {
+        const radius = Math.hypot(dx, dy);
+        const rotation = Math.atan2(dy, dx) - Math.PI / 2;
+        const n = Math.max(3, Math.min(30, state.polygonSides));
+        for (let i = 0; i <= n; i++) {
+          const a = rotation + (i % n) * Math.PI * 2 / n;
+          const x = start.x + radius * Math.cos(a);
+          const y = start.y + radius * Math.sin(a);
+          if (i === 0) drawCtx.moveTo(x, y); else drawCtx.lineTo(x, y);
+        }
+      }
+      drawCtx.stroke();
+      drawCtx.globalAlpha = 1.0;
+    }
+
+    function drawThreePointAngle(points) {
+      if (points.length !== 3) return;
+      const [p1, vertex, p3] = points;
+      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      const rayLen = Math.max(drawCanvas.width, drawCanvas.height) * 2;
+      const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+      const a2 = Math.atan2(p3.y - vertex.y, p3.x - vertex.x);
+      drawCtx.save();
+      drawCtx.strokeStyle = state.penColor;
+      drawCtx.lineWidth = state.penWidth * dpr;
+      drawCtx.lineCap = 'round';
+      drawCtx.beginPath();
+      drawCtx.moveTo(vertex.x, vertex.y);
+      drawCtx.lineTo(vertex.x + Math.cos(a1) * rayLen, vertex.y + Math.sin(a1) * rayLen);
+      drawCtx.moveTo(vertex.x, vertex.y);
+      drawCtx.lineTo(vertex.x + Math.cos(a2) * rayLen, vertex.y + Math.sin(a2) * rayLen);
+      drawCtx.stroke();
+      [p1, vertex, p3].forEach(p => { drawCtx.beginPath(); drawCtx.arc(p.x, p.y, 4*dpr, 0, Math.PI*2); drawCtx.fillStyle = state.penColor; drawCtx.fill(); });
+      drawCtx.restore();
+    }
+
+    function endDrawing(e) {
+      if (e.pointerId !== state.activePointerId) return;
+      // Son freehand noktasını işle (uç kesik kalmasın)
+      if (state.isDrawing && state.selectedShape === 'free') {
+        if (freehandRaf) { cancelAnimationFrame(freehandRaf); freehandRaf = null; }
+        if (pendingFreePos) flushFreehandStroke();
+        setDrawingStyle(0.5);
+        drawCtx.beginPath();
+        drawCtx.moveTo(midX, midY);
+        drawCtx.lineTo(lastX, lastY);
+        drawCtx.stroke();
+        drawCtx.globalAlpha = 1.0;
+      }
+      // Şekil / çokgen: son konumu kalıcı çiz (pointerup'ta mutlaka bitsin)
+      if (state.isDrawing && state.shapeStart && state.selectedShape !== 'free' && state.selectedShape !== 'text' && state.currentTool !== 'eraser') {
+        const pos = (e && e.clientX != null) ? getPos(e) : { x: lastX, y: lastY };
+        if (snapshot) {
+          try { drawCtx.putImageData(snapshot, 0, 0); } catch (_) {}
+        }
+        drawShapePreview(state.shapeStart, pos);
+      }
+      if (state.isPanning && state.panStart) {
+        const dx = e.clientX - state.panStart.x;
+        const dy = e.clientY - state.panStart.y;
+        ['pdfCanvas', 'drawCanvas', 'imageLayer', 'instrumentsLayer'].forEach(id => {
+          state.panOffsets[id][0] += dx;
+          state.panOffsets[id][1] += dy;
+        });
+      }
+      state.isPanning = false;
+      state.panStart = null;
+      state.isDrawing = false;
+      strokeStarted = false;
+      pendingFreePos = null;
+      if (freehandRaf) { cancelAnimationFrame(freehandRaf); freehandRaf = null; }
+      snapshot = null;
+      state.shapeStart = null;
+      releasePointerLock(e.pointerId);
+      state.activePointerId = null;
+      drawCanvas.style.cursor = state.currentTool === 'hand' ? 'grab' : 'crosshair';
+      try { drawCanvas.releasePointerCapture(e.pointerId); } catch(err){}
+    }
+    drawCanvas.addEventListener('pointerup', endDrawing);
+    drawCanvas.addEventListener('pointercancel', endDrawing);
+    drawCanvas.addEventListener('lostpointercapture', (e) => {
+      if (e.pointerId === state.activePointerId) endDrawing(e);
+    });
+
+    // Araç Mod Değiştiricileri
+    function resetToFreeShape() {
+      state.selectedShape = 'free';
+      document.getElementById('shapeSelect').value = 'free';
+      state.anglePoints = [];
+      const polyBtn = document.getElementById('btnPolygonMenu');
+      if (polyBtn) {
+        polyBtn.classList.remove('ring-2', 'ring-indigo-500');
+        polyBtn.style.background = '';
+      }
+    }
+    document.getElementById('btnHand').addEventListener('click', () => { resetToFreeShape(); setTool('hand', 'btnHand'); });
+    document.getElementById('btnPen').addEventListener('click', () => { resetToFreeShape(); setTool('pen', 'btnPen'); });
+    document.getElementById('btnHighlighter').addEventListener('click', () => { resetToFreeShape(); setTool('highlighter', 'btnHighlighter'); });
+    document.getElementById('btnEraser').addEventListener('click', () => { resetToFreeShape(); setTool('eraser', 'btnEraser'); });
+
+    function setTool(tool, btnId) {
+      state.currentTool = tool;
+      document.querySelectorAll('.draw-tool').forEach(b => {
+        b.classList.remove('bg-indigo-600', 'text-white');
+        b.classList.add('text-slate-300');
+      });
+      document.getElementById(btnId).classList.add('bg-indigo-600', 'text-white');
+      drawCanvas.style.cursor = tool === 'hand' ? 'grab' : 'crosshair';
+      if (tool === 'hand') {
+        drawCanvas.style.touchAction = 'none';
+      }
+    }
+
+    const polygonMenuPanel = document.getElementById('polygonMenuPanel');
+    function clearPolygonHighlight() {
+      const polyBtn = document.getElementById('btnPolygonMenu');
+      if (polyBtn) {
+        polyBtn.classList.remove('ring-2', 'ring-indigo-500');
+        polyBtn.style.background = '';
+      }
+    }
+    document.getElementById('shapeSelect').addEventListener('change', (e) => {
+      state.selectedShape = e.target.value;
+      state.anglePoints = [];
+      if (e.target.value === 'polygon') {
+        setTool('pen', 'btnPen');
+        const polyBtn = document.getElementById('btnPolygonMenu');
+        if (polyBtn) {
+          polyBtn.classList.add('ring-2', 'ring-indigo-500');
+          polyBtn.style.background = 'rgba(99,102,241,0.12)';
+        }
+      } else {
+        clearPolygonHighlight();
+      }
+    });
+    document.getElementById('btnPolygonMenu').addEventListener('click', (e) => {
+      e.stopPropagation();
+      polygonMenuPanel.classList.toggle('hidden');
+    });
+    document.getElementById('polygonMinus').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.polygonSides = Math.max(3, state.polygonSides - 1);
+      document.getElementById('polygonSides').value = state.polygonSides;
+    });
+    document.getElementById('polygonPlus').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.polygonSides = Math.min(30, state.polygonSides + 1);
+      document.getElementById('polygonSides').value = state.polygonSides;
+    });
+    document.getElementById('polygonSides').addEventListener('input', (e) => {
+      state.polygonSides = Math.max(3, Math.min(30, parseInt(e.target.value) || 3));
+      e.target.value = state.polygonSides;
+    });
+    document.getElementById('btnUsePolygon').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.selectedShape = 'polygon';
+      state.currentTool = 'pen';
+      state.anglePoints = [];
+      document.getElementById('shapeSelect').value = 'polygon';
+      setTool('pen', 'btnPen');
+      const polyBtn = document.getElementById('btnPolygonMenu');
+      if (polyBtn) {
+        polyBtn.classList.add('ring-2', 'ring-indigo-500');
+        polyBtn.style.background = 'rgba(99,102,241,0.12)';
+      }
+      polygonMenuPanel.classList.add('hidden');
+    });
+
+    // Renk Seçimi
+    const penColorInput = document.getElementById('penColor');
+    penColorInput.addEventListener('input', (e) => {
+      state.penColor = e.target.value;
+      updateColorPresetRing(null);
+    });
+
+    document.querySelectorAll('.color-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        state.penColor = color;
+        penColorInput.value = color;
+        updateColorPresetRing(btn);
+      });
+    });
+
+    function updateColorPresetRing(selectedBtn) {
+      document.querySelectorAll('.color-preset').forEach(b => {
+        b.classList.remove('ring-indigo-500', 'scale-110');
+        b.classList.add('ring-transparent');
+      });
+      if (selectedBtn) {
+        selectedBtn.classList.remove('ring-transparent');
+        selectedBtn.classList.add('ring-indigo-500', 'scale-110');
+      }
+    }
+
+    // Kalınlık Ayarı
+    const penWidthInput = document.getElementById('penWidth');
+    const widthValueSpan = document.getElementById('widthValue');
+    penWidthInput.addEventListener('input', (e) => {
+      state.penWidth = parseInt(e.target.value);
+      widthValueSpan.textContent = state.penWidth;
+    });
+
+    // Arka plan deseni ve renk seçimi (yan menü + sol üst açılır menü)
+    function applyBoardBackground(mode) {
+      workspace.className = 'relative flex-1 board-bg overflow-hidden';
+      workspace.style.backgroundImage = '';
+      workspace.style.backgroundSize = '';
+      workspace.style.backgroundRepeat = '';
+      workspace.style.backgroundPosition = '';
+      workspace.style.backgroundColor = '#ffffff';
+      if (mode === 'graph') workspace.classList.add('grid-graph');
+      else if (mode === 'dots') workspace.classList.add('grid-dots');
+      else if (mode === 'isometric') workspace.classList.add('grid-isometric');
+      else if (mode === 'dark') { workspace.style.backgroundColor = '#1e293b'; workspace.style.backgroundImage = 'none'; }
+      else if (mode === 'blue') { workspace.style.backgroundColor = '#eff6ff'; workspace.style.backgroundImage = 'none'; }
+      if (mode === 'none') workspace.style.backgroundImage = 'none';
+      const select = document.getElementById('gridSelect');
+      if (select && ['none', 'graph', 'dots', 'isometric'].includes(mode)) select.value = mode;
+    }
+    const backgroundPickerButton = document.getElementById('btnBackgroundPicker');
+    const backgroundPickerMenu = document.getElementById('backgroundPickerMenu');
+    const shapeMenu = document.getElementById('shapeMenu');
+    const polygonMenu = document.getElementById('polygonMenu');
+    function syncTopRightMenus() {
+      const open = !backgroundPickerMenu.classList.contains('hidden');
+      // Kapalıyken doğrudan Arka Plan düğmesinin altı; açıkken Arka Plan listesinin altı.
+      const shapeTop = open ? document.getElementById('backgroundPicker').offsetHeight + 8 : 58;
+      shapeMenu.style.top = `${shapeTop}px`;
+      polygonMenu.style.top = `${shapeTop + shapeMenu.offsetHeight + 8}px`;
+    }
+    backgroundPickerButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !backgroundPickerMenu.classList.contains('hidden');
+      backgroundPickerMenu.classList.toggle('hidden', isOpen);
+      backgroundPickerButton.setAttribute('aria-expanded', String(!isOpen));
+      syncTopRightMenus();
+    });
+    document.querySelectorAll('.board-bg-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        applyBoardBackground(option.dataset.boardBg);
+        backgroundPickerMenu.classList.add('hidden');
+        backgroundPickerButton.setAttribute('aria-expanded', 'false');
+        syncTopRightMenus();
+      });
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('backgroundPicker').contains(e.target)) {
+        backgroundPickerMenu.classList.add('hidden');
+        backgroundPickerButton.setAttribute('aria-expanded', 'false');
+        syncTopRightMenus();
+      }
+      if (polygonMenu && !polygonMenu.contains(e.target)) polygonMenuPanel.classList.add('hidden');
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      saveCanvasState();
+      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      imageLayer.innerHTML = '';
+    });
+
+    // 4. Tam Ekran ve Dışa Aktar Yönetimi
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      // Tam ekran giriş/çıkışta tuval oranını koruyarak yeniden boyutlandır (daire elips olmasın)
+      const run = () => { try { resizeCanvases(); } catch (_) {} };
+      run();
+      setTimeout(run, 50);
+      setTimeout(run, 200);
+    });
+
+    const exportMenu = document.getElementById('exportMenu');
+    const btnExport = document.getElementById('btnExport');
+    function closeExportMenu() {
+      exportMenu.classList.add('hidden');
+      exportMenu.classList.remove('flex');
+    }
+    function openExportMenu() {
+      const rect = btnExport.getBoundingClientRect();
+      exportMenu.style.position = 'fixed';
+      exportMenu.style.left = `${Math.round(rect.right + 8)}px`;
+      exportMenu.style.top = `${Math.round(rect.top)}px`;
+      exportMenu.style.zIndex = '200';
+      exportMenu.style.background = '#1e293b';
+      exportMenu.classList.remove('hidden');
+      exportMenu.classList.add('flex');
+    }
+    btnExport.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!exportMenu.classList.contains('hidden')) closeExportMenu();
+      else openExportMenu();
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('exportMenuWrap').contains(e.target) && !exportMenu.contains(e.target)) {
+        closeExportMenu();
+      }
+    });
+    document.getElementById('exportPNG').addEventListener('click', () => {
+      exportMenu.classList.add('hidden');
+      exportMenu.classList.remove('flex');
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = drawCanvas.width;
+      exportCanvas.height = drawCanvas.height;
+      const ctx = exportCanvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+      if (state.pdfDoc) ctx.drawImage(pdfCanvas, pdfCanvas.offsetLeft, pdfCanvas.offsetTop);
+      ctx.drawImage(drawCanvas, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `geoboard-cizim-${Date.now()}.png`;
+      link.href = exportCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    document.getElementById('exportPDF').addEventListener('click', () => {
+      exportMenu.classList.add('hidden');
+      exportMenu.classList.remove('flex');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = drawCanvas.width;
+      exportCanvas.height = drawCanvas.height;
+      const ctx = exportCanvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      if (state.pdfDoc) ctx.drawImage(pdfCanvas, pdfCanvas.offsetLeft, pdfCanvas.offsetTop);
+      ctx.drawImage(drawCanvas, 0, 0);
+
+      const imgData = exportCanvas.toDataURL('image/jpeg', 1.0);
+      doc.addImage(imgData, 'JPEG', 0, 0, 297, 210);
+      doc.save(`geoboard-cizim-${Date.now()}.pdf`);
+    });
+
+    // Geometri Çizimleri
+    function renderRulerGraphics() {
+      const c = document.getElementById('rulerCanvas');
+      const r = state.instruments.ruler;
+      c.width = r.width;
+      c.height = 80;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 10px Inter';
+      ctx.textAlign = 'center';
+
+      const pxPerCm = 32;
+      const totalCm = Math.floor(r.width / pxPerCm);
+
+      for (let i = 0; i <= totalCm * 10; i++) {
+        const x = i * (pxPerCm / 10);
+        let tickLen = 8;
+
+        if (i % 10 === 0) {
+          tickLen = 24;
+          const cmVal = i / 10;
+          if (cmVal > 0) ctx.fillText(cmVal.toString(), x, 38);
+        } else if (i % 5 === 0) {
+          tickLen = 16;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, tickLen);
+        ctx.stroke();
+      }
+    }
+
+    function renderProtractorGraphics() {
+      const c = document.getElementById('protractorCanvas');
+      const prot = state.instruments.protractor;
+      const r = prot.radius;
+      const width = Math.round(r * 2);
+      const height = prot.mode360 ? Math.round(r * 2) : Math.round(r);
+      c.width = width;
+      c.height = height;
+      const parentEl = document.getElementById('protractor');
+      parentEl.style.width = `${width}px`;
+      parentEl.style.height = `${height}px`;
+      parentEl.style.background = 'transparent';
+      parentEl.style.backdropFilter = 'none';
+      parentEl.style.webkitBackdropFilter = 'none';
+      parentEl.style.border = 'none';
+      parentEl.style.boxShadow = 'none';
+      parentEl.classList.remove('glass-acrylic');
+
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, width, height);
+      const cx = r;
+      const cy = prot.mode360 ? r : r;
+      const maxDeg = prot.mode360 ? 360 : 180;
+
+      // Hafif dolgu (Polypad benzeri açık gri, yarı saydam)
+      ctx.beginPath();
+      if (prot.mode360) {
+        ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo(cx - r + 0.5, cy);
+        ctx.arc(cx, cy, r - 0.5, Math.PI, 0, false);
+        ctx.closePath();
+      }
+      ctx.fillStyle = 'rgba(241, 245, 249, 0.55)';
+      ctx.fill();
+      ctx.lineWidth = 1.25;
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.55)';
+      ctx.stroke();
+
+      // Taban çizgisi
+      if (!prot.mode360) {
+        ctx.beginPath();
+        ctx.moveTo(cx - r + 1, cy);
+        ctx.lineTo(cx + r - 1, cy);
+        ctx.lineWidth = 1.25;
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.7)';
+        ctx.stroke();
+      }
+
+      // Her 10° radyal çizgi (merkeze doğru)
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+      ctx.lineWidth = 1;
+      for (let deg = 0; deg <= maxDeg; deg += 10) {
+        if (!prot.mode360 && (deg === 0 || deg === 180)) continue;
+        const rad = deg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        ctx.beginPath();
+        ctx.moveTo(cx + 8 * cos, cy - 8 * sin);
+        ctx.lineTo(cx + (r - 18) * cos, cy - (r - 18) * sin);
+        ctx.stroke();
+      }
+
+      // Dış kenar tick'leri (1°)
+      for (let deg = 0; deg <= maxDeg; deg += 1) {
+        const rad = deg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        let tickLen = 5;
+        if (deg % 10 === 0) tickLen = 16;
+        else if (deg % 5 === 0) tickLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(cx + (r - 1) * cos, cy - (r - 1) * sin);
+        ctx.lineTo(cx + (r - 1 - tickLen) * cos, cy - (r - 1 - tickLen) * sin);
+        ctx.lineWidth = deg % 10 === 0 ? 1.35 : 0.9;
+        ctx.strokeStyle = 'rgba(30, 41, 59, 0.85)';
+        ctx.stroke();
+      }
+
+      // Çift ölçek etiketleri
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let deg = 0; deg <= maxDeg; deg += 10) {
+        if (deg === 360) continue;
+        const rad = deg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+
+        // Dış ölçek (siyah): 0 sağ → 180 sol
+        const outerR = r - 28;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `bold ${Math.max(9, Math.round(r / 18))}px Inter, system-ui, sans-serif`;
+        ctx.fillText(String(deg), cx + outerR * cos, cy - outerR * sin);
+
+        // İç ölçek (çift taraflı): 180 sağ → 0 sol
+        if (!prot.mode360 || deg <= 180) {
+          const innerLabel = prot.mode360 ? ((360 - deg) % 360) : (180 - deg);
+          const innerR = r * 0.52;
+          ctx.fillStyle = '#334155';
+          ctx.font = `bold ${Math.max(8, Math.round(r / 22))}px Inter, system-ui, sans-serif`;
+          ctx.fillText(String(innerLabel), cx + innerR * cos, cy - innerR * sin);
+        }
+      }
+
+      // Merkez siyah nokta (Polypad)
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(5, r * 0.035), 0, Math.PI * 2);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+    }
+
+    document.getElementById('btnToggle360').addEventListener('click', () => {
+      state.instruments.protractor.mode360 = !state.instruments.protractor.mode360;
+      renderProtractorGraphics();
+    });
+
+    function updateProtractorTransform() {
+      const el = document.getElementById('protractor');
+      const p = state.instruments.protractor;
+      const cy = p.mode360 ? p.radius : p.radius;
+      el.style.transform = `translate3d(${p.x - p.radius}px, ${p.y - cy}px, 0px) rotate(${p.angle}deg)`;
+      el.style.transformOrigin = `${p.radius}px ${cy}px`;
+      // Tutamaçları taban uçlarına (0° / 180°) hizala
+      const hl = document.getElementById('protractorResizeHandleLeft');
+      const hr = document.getElementById('protractorResizeHandle');
+      const hs = 28;
+      if (hl) {
+        hl.style.left = `${-hs / 2}px`;
+        hl.style.bottom = p.mode360 ? `${p.radius - hs / 2}px` : `${-hs / 2}px`;
+        hl.style.top = 'auto';
+        hl.style.right = 'auto';
+      }
+      if (hr) {
+        hr.style.right = `${-hs / 2}px`;
+        hr.style.left = 'auto';
+        hr.style.bottom = p.mode360 ? `${p.radius - hs / 2}px` : `${-hs / 2}px`;
+        hr.style.top = 'auto';
+      }
+    }
+
+    // Açıölçer Etkileşimleri
+    // Polypad tarzı: merkez pivot sabit, sağ uç pointer ile birebir hareket eder.
+    const protractorEl = document.getElementById('protractor');
+    const protractorResizeHandle = document.getElementById('protractorResizeHandle');
+    const protractorResizeHandleLeft = document.getElementById('protractorResizeHandleLeft');
+    let protractorGesture = null;
+
+    function getBoardPoint(e) {
+      const rect = workspace.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    const instrumentDrawing = { active: false, key: null, pointerId: null, last: null, edge: null };
+
+    function isCanvasDrawingTool() {
+      return state.currentTool === 'pen' || state.currentTool === 'highlighter' || state.currentTool === 'eraser';
+    }
+
+    function getInstrumentLocalPoint(e, inst, el) {
+      const pt = getBoardPoint(e);
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const cx = inst.x + w / 2;
+      const cy = inst.y + h / 2;
+      const a = -inst.angle * Math.PI / 180;
+      const dx = pt.x - cx;
+      const dy = pt.y - cy;
+      return {
+        x: dx * Math.cos(a) - dy * Math.sin(a) + w / 2,
+        y: dx * Math.sin(a) + dy * Math.cos(a) + h / 2,
+        w, h
+      };
+    }
+
+    function localToBoardPoint(local, inst, el) {
+      const w = el.offsetWidth, h = el.offsetHeight;
+      const a = inst.angle * Math.PI / 180;
+      const dx = local.x - w / 2;
+      const dy = local.y - h / 2;
+      return {
+        x: inst.x + w / 2 + dx * Math.cos(a) - dy * Math.sin(a),
+        y: inst.y + h / 2 + dx * Math.sin(a) + dy * Math.cos(a)
+      };
+    }
+
+    function constrainedInstrumentPoint(e, key, inst, el, edge) {
+      const p = getInstrumentLocalPoint(e, inst, el);
+      if (key === 'ruler') {
+        return localToBoardPoint({ x: Math.max(0, Math.min(p.w, p.x)), y: 1 }, inst, el);
+      }
+      if (key === 'triangle45') {
+        const leftEdge = 15 / 290 * p.w;
+        const bottomEdge = 275 / 290 * p.h;
+        if (edge === 'left') return localToBoardPoint({ x: leftEdge, y: Math.max(0, Math.min(bottomEdge, p.y)) }, inst, el);
+        return localToBoardPoint({ x: Math.max(leftEdge, Math.min(p.w - 15 / 290 * p.w, p.x)), y: bottomEdge }, inst, el);
+      }
+      return getBoardPoint(e);
+    }
+
+    function boardCssToCanvas(p) {
+      // Workspace CSS (araç left/top, pan öncesi) → çizim tuvali piksel koordinatı
+      // PDF açıkken drawCanvas origin kayar; pan transform getBoundingClientRect'e yansır.
+      const rect = drawCanvas.getBoundingClientRect();
+      const ws = workspace.getBoundingClientRect();
+      const panX = (state.panOffsets && state.panOffsets.drawCanvas) ? state.panOffsets.drawCanvas[0] : 0;
+      const panY = (state.panOffsets && state.panOffsets.drawCanvas) ? state.panOffsets.drawCanvas[1] : 0;
+      // instrumentsLayer ile aynı pan ofseti: görsel konum = ws + local + pan
+      const clientX = ws.left + p.x + panX;
+      const clientY = ws.top + p.y + panY;
+      const scaleX = drawCanvas.width / (rect.width || 1);
+      const scaleY = drawCanvas.height / (rect.height || 1);
+      return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    }
+
+    function drawInstrumentSegment(from, to) {
+      const a = boardCssToCanvas(from);
+      const b = boardCssToCanvas(to);
+      drawCtx.save();
+      drawCtx.beginPath();
+      drawCtx.moveTo(a.x, a.y);
+      drawCtx.lineTo(b.x, b.y);
+      drawCtx.globalCompositeOperation = state.currentTool === 'eraser' ? 'destination-out' : 'source-over';
+      drawCtx.strokeStyle = state.penColor;
+      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      drawCtx.lineWidth = (state.currentTool === 'eraser' ? state.penWidth * 6 : state.penWidth) * dpr;
+      drawCtx.globalAlpha = state.currentTool === 'highlighter' ? 0.35 : 1;
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.stroke();
+      drawCtx.restore();
+    }
+
+    function beginInstrumentDrawing(e, key, el) {
+      if (!isCanvasDrawingTool() || (key !== 'ruler' && key !== 'triangle45' && key !== 'protractor')) return false;
+      // Akıllı tahta: başka parmak/araç aktifse kenar çizimine izin verme
+      if (!acquirePointerLock(e.pointerId)) return false;
+      const inst = key === 'protractor' ? state.instruments.protractor : state.instruments[key];
+      instrumentDrawing.active = true;
+      instrumentDrawing.key = key;
+      instrumentDrawing.pointerId = e.pointerId;
+      instrumentDrawing.edge = null;
+      instrumentDrawing.snapshot = null;
+      if (key === 'triangle45') {
+        const local = getInstrumentLocalPoint(e, inst, el);
+        const leftEdge = 15 / 290 * local.w;
+        const rightEdge = 275 / 290 * local.w;
+        const topEdge = 15 / 290 * local.h;
+        const bottomEdge = 275 / 290 * local.h;
+        const clampedLeftY = Math.max(topEdge, Math.min(bottomEdge, local.y));
+        const clampedBottomX = Math.max(leftEdge, Math.min(rightEdge, local.x));
+        const leftDistance = Math.hypot(local.x - leftEdge, local.y - clampedLeftY);
+        const bottomDistance = Math.hypot(local.x - clampedBottomX, local.y - bottomEdge);
+        instrumentDrawing.edge = leftDistance <= bottomDistance ? 'left' : 'bottom';
+      }
+      instrumentDrawing.start = key === 'protractor' ? getBoardPoint(e) : constrainedInstrumentPoint(e, key, inst, el, instrumentDrawing.edge);
+      instrumentDrawing.last = instrumentDrawing.start;
+      if (key === 'ruler' || key === 'triangle45') {
+        try { instrumentDrawing.snapshot = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height); } catch (_) { instrumentDrawing.snapshot = null; }
+      }
+      saveCanvasState();
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      el.classList.add('edge-draw');
+      el.style.cursor = (typeof PEN_CURSOR !== 'undefined' ? PEN_CURSOR : 'crosshair');
+      return true;
+    }
+
+    function moveInstrumentDrawing(e, el) {
+      if (!instrumentDrawing.active || e.pointerId !== instrumentDrawing.pointerId) return;
+      const key = instrumentDrawing.key;
+      const inst = key === 'protractor' ? state.instruments.protractor : state.instruments[key];
+      const next = key === 'protractor' ? getBoardPoint(e) : constrainedInstrumentPoint(e, key, inst, el, instrumentDrawing.edge);
+      if (key === 'ruler' || key === 'triangle45') {
+        if (instrumentDrawing.snapshot) {
+          drawCtx.putImageData(instrumentDrawing.snapshot, 0, 0);
+        }
+        drawInstrumentSegment(instrumentDrawing.start, next);
+        instrumentDrawing.last = next;
+      } else {
+        drawInstrumentSegment(instrumentDrawing.last, next);
+        instrumentDrawing.last = next;
+      }
+    }
+
+    function finishInstrumentDrawing(e, el) {
+      if (instrumentDrawing.active && e.pointerId === instrumentDrawing.pointerId) {
+        const key = instrumentDrawing.key;
+        if ((key === 'ruler' || key === 'triangle45') && instrumentDrawing.start && instrumentDrawing.last) {
+          if (instrumentDrawing.snapshot) {
+            try { drawCtx.putImageData(instrumentDrawing.snapshot, 0, 0); } catch (_) {}
+          }
+          drawInstrumentSegment(instrumentDrawing.start, instrumentDrawing.last);
+        }
+        instrumentDrawing.active = false;
+        instrumentDrawing.key = null;
+        instrumentDrawing.pointerId = null;
+        instrumentDrawing.last = null;
+        instrumentDrawing.start = null;
+        instrumentDrawing.edge = null;
+        instrumentDrawing.snapshot = null;
+        el.classList.remove('edge-draw');
+        el.style.cursor = '';
+        releasePointerLock(e.pointerId);
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    }
+
+    const PEN_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%231e293b' stroke='%23ffffff' stroke-width='1.2' d='M3 21l3.5-1 11-11-2.5-2.5-11 11L3 21z'/%3E%3Cpath fill='%23f8fafc' stroke='%231e293b' stroke-width='0.8' d='M14.5 6.5l2.5 2.5 1.8-1.8a1.5 1.5 0 0 0 0-2.1L17.4 3.7a1.5 1.5 0 0 0-2.1 0L14.5 6.5z'/%3E%3C/svg%3E\") 2 22, crosshair";
+
+    function isNearInstrumentEdge(e, key, el) {
+      if (!isCanvasDrawingTool()) return false;
+      if (key !== 'ruler' && key !== 'triangle45') return false;
+      const inst = state.instruments[key];
+      if (!inst || !inst.visible) return false;
+      const local = getInstrumentLocalPoint(e, inst, el);
+      const threshold = 28;
+      if (key === 'ruler') {
+        // Üst kenar boyunca çizgi (cetvel tick tarafı)
+        return local.y >= -threshold && local.y <= threshold + 16 && local.x >= -4 && local.x <= local.w + 4;
+      }
+      if (key === 'triangle45') {
+        const leftEdge = 15 / 290 * local.w;
+        const bottomEdge = 275 / 290 * local.h;
+        const nearLeft = Math.abs(local.x - leftEdge) <= threshold && local.y >= 0 && local.y <= bottomEdge;
+        const nearBottom = Math.abs(local.y - bottomEdge) <= threshold && local.x >= leftEdge && local.x <= local.w;
+        return nearLeft || nearBottom;
+      }
+      return false;
+    }
+
+    protractorEl.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      if (beginInstrumentDrawing(e, 'protractor', protractorEl)) { e.preventDefault(); e.stopPropagation(); return; }
+      if (!acquirePointerLock(e.pointerId)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const p = state.instruments.protractor;
+      const pt = getBoardPoint(e);
+      if (e.target === protractorResizeHandle || e.target.closest('#protractorResizeHandle') ||
+          e.target === protractorResizeHandleLeft || e.target.closest('#protractorResizeHandleLeft')) {
+        const leftHandle = e.target === protractorResizeHandleLeft || !!e.target.closest('#protractorResizeHandleLeft');
+        protractorGesture = { mode: 'pivot', pivotX: p.x, pivotY: p.y, side: leftHandle ? 'left' : 'right' };
+      } else {
+        protractorGesture = { mode: 'move', offsetX: pt.x - p.x, offsetY: pt.y - p.y };
+      }
+      try { protractorEl.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    protractorEl.addEventListener('pointermove', (e) => {
+      if (instrumentDrawing.active) { moveInstrumentDrawing(e, protractorEl); e.preventDefault(); return; }
+      if (!protractorGesture) return;
+      e.preventDefault();
+      const p = state.instruments.protractor;
+      const pt = getBoardPoint(e);
+
+      if (protractorGesture.mode === 'move') {
+        p.x = pt.x - protractorGesture.offsetX;
+        p.y = pt.y - protractorGesture.offsetY;
+      } else {
+        // Uç nokta doğrudan pointer konumuna eşittir.
+        const dx = pt.x - protractorGesture.pivotX;
+        const dy = pt.y - protractorGesture.pivotY;
+        const distance = Math.hypot(dx, dy);
+        p.radius = Math.max(80, Math.min(320, distance));
+        const pointerAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+        // Sağ uç 0° yönünü, sol uç ise bunun tam karşısını temsil eder.
+        p.angle = protractorGesture.side === 'left' ? pointerAngle - 180 : pointerAngle;
+        p.x = protractorGesture.pivotX;
+        p.y = protractorGesture.pivotY;
+        renderProtractorGraphics();
+      }
+      updateProtractorTransform();
+    });
+
+    function finishProtractorGesture(e) {
+      if (instrumentDrawing.active) { finishInstrumentDrawing(e, protractorEl); return; }
+      protractorGesture = null;
+      releasePointerLock(e.pointerId);
+      try { protractorEl.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    protractorEl.addEventListener('pointerup', finishProtractorGesture);
+    protractorEl.addEventListener('pointercancel', finishProtractorGesture);
+
+    function renderTriangle45Graphics() {
+      const c = document.getElementById('triangle45Canvas');
+      c.width = 290;
+      c.height = 290;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      ctx.beginPath();
+      ctx.moveTo(15, 15);
+      ctx.lineTo(15, 275);
+      ctx.lineTo(275, 275);
+      ctx.closePath();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0f172a';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(55, 95);
+      ctx.lineTo(55, 235);
+      ctx.lineTo(195, 235);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
+      ctx.stroke();
+
+      // Cetvel çizgileri: iki dik kenar boyunca santimetre ve yarım santimetre işaretleri.
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.95)';
+      ctx.lineWidth = 1.35;
+      for (let d = 0; d <= 256; d += 8) {
+        const len = d % 32 === 0 ? 10 : (d % 16 === 0 ? 7 : 4);
+        ctx.beginPath(); ctx.moveTo(15, 275 - d); ctx.lineTo(15 + len, 275 - d); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(15 + d, 275); ctx.lineTo(15 + d, 275 - len); ctx.stroke();
+        if (d > 0 && d % 32 === 0) {
+          ctx.font = 'bold 11px Inter';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+          ctx.textAlign = 'center';
+          ctx.strokeText(String(d / 32), 31, 275 - d + 4);
+          ctx.strokeText(String(d / 32), 15 + d, 261);
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(String(d / 32), 31, 275 - d + 4);
+          ctx.fillText(String(d / 32), 15 + d, 261);
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.95)';
+        }
+      }
+    }
+
+    // Mekanik Pergel Motoru
+    const compassContainer = document.getElementById('compassContainer');
+    const legPencil = document.getElementById('legPencil');
+    const pencilAssembly = document.getElementById('pencilAssembly');
+    const radiusHandleCircle = document.getElementById('radiusHandleCircle');
+    const compassGuideCircle = document.getElementById('compassGuideCircle');
+    const compassRadiusLine = document.getElementById('compassRadiusLine');
+    const compassRadiusText = document.getElementById('compassRadiusText');
+    const compassInfoBadge = document.getElementById('compassInfoBadge');
+    const topRotationHandle = document.getElementById('topRotationHandle');
+    const radiusHandle = document.getElementById('radiusHandle');
+    const screwNut = document.getElementById('screwNut');
+    const screwShaft = document.getElementById('screwShaft');
+
+    function getPencilTipWorldPos() {
+      const rad = state.compass.angle * (Math.PI / 180);
+      const r = state.compass.radius;
+      return {
+        x: state.compass.x + r * Math.cos(rad),
+        y: state.compass.y + r * Math.sin(rad)
+      };
+    }
+
+    function updateCompassTransform() {
+      const comp = state.compass;
+      
+      compassContainer.style.left = `${comp.x}px`;
+      compassContainer.style.top = `${comp.y}px`;
+      compassContainer.style.transform = `translate(-180px, -350px) rotate(${comp.angle}deg)`;
+      compassContainer.style.transformOrigin = '180px 350px';
+
+      const r = comp.radius;
+
+      const hingeX = r / 2;
+      document.getElementById('legNeedle').setAttribute('d', `M ${hingeX},-180 L 0,0`);
+      document.getElementById('needleHighlight').setAttribute('d', `M ${hingeX-2},-168 L 2,-12`);
+      document.getElementById('legPencil').setAttribute('d', `M ${hingeX},-180 L ${r},0`);
+      document.getElementById('pencilHighlight').setAttribute('d', `M ${hingeX+2},-168 L ${r-3},-12`);
+      document.getElementById('compassPivotOuter').setAttribute('cx', hingeX);
+      document.getElementById('compassPivotOuter').setAttribute('cy', -180);
+      document.getElementById('compassPivotMiddle').setAttribute('cx', hingeX);
+      document.getElementById('compassPivotMiddle').setAttribute('cy', -180);
+      document.getElementById('compassPivotInner').setAttribute('cx', hingeX);
+      document.getElementById('compassPivotInner').setAttribute('cy', -180);
+      topRotationHandle.setAttribute('transform', `translate(${hingeX-60},0)`);
+      pencilAssembly.setAttribute('transform', `translate(${r}, 0)`);
+      radiusHandleCircle.setAttribute('cx', r);
+
+      screwShaft.setAttribute('d', `M ${hingeX-28},-108 L ${hingeX+28},-108`);
+      document.getElementById('screwShaftHighlight').setAttribute('d', `M ${hingeX-26},-108 L ${hingeX+26},-108`);
+      screwNut.setAttribute('cx', hingeX);
+      screwNut.setAttribute('cy', -108);
+      document.getElementById('screwNutInner').setAttribute('cx', hingeX);
+      document.getElementById('screwNutInner').setAttribute('cy', -108);
+
+      compassGuideCircle.setAttribute('r', r);
+      compassRadiusLine.setAttribute('x2', r);
+      compassInfoBadge.setAttribute('transform', `translate(${r / 2}, -18)`);
+
+      const cmValue = (r / 32).toFixed(1);
+      compassRadiusText.textContent = `${cmValue} cm`;
+    }
+
+    let isDraggingCompass = false;
+    let compassDragStart = { x: 0, y: 0 };
+
+    compassContainer.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('#topRotationHandle') || e.target.closest('#radiusHandle') || e.target.closest('#pencilAssembly')) return;
+      if (!acquirePointerLock(e.pointerId)) return;
+      e.stopPropagation();
+      isDraggingCompass = true;
+      compassDragStart = { x: e.clientX - state.compass.x, y: e.clientY - state.compass.y };
+      try { compassContainer.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    compassContainer.addEventListener('pointermove', (e) => {
+      if (isDraggingCompass && isPointerLocked(e.pointerId)) {
+        state.compass.x = e.clientX - compassDragStart.x;
+        state.compass.y = e.clientY - compassDragStart.y;
+        updateCompassTransform();
+      }
+    });
+
+    compassContainer.addEventListener('pointerup', (e) => {
+      isDraggingCompass = false;
+      releasePointerLock(e.pointerId);
+      try { compassContainer.releasePointerCapture(e.pointerId); } catch(err){}
+    });
+
+    let isAdjustingCompassRadius = false;
+
+    radiusHandle.addEventListener('pointerdown', (e) => {
+      if (!acquirePointerLock(e.pointerId)) return;
+      e.stopPropagation();
+      isAdjustingCompassRadius = true;
+      if (typeof setCompassGuidesVisible === 'function') setCompassGuidesVisible(true);
+      else {
+        compassGuideCircle.setAttribute('opacity', '1');
+        compassRadiusLine.setAttribute('opacity', '1');
+        compassInfoBadge.setAttribute('opacity', '1');
+        radiusHandle.setAttribute('opacity', '1');
+      }
+      try { radiusHandle.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    radiusHandle.addEventListener('pointermove', (e) => {
+      if (isAdjustingCompassRadius) {
+        const rect = compassContainer.getBoundingClientRect();
+        const svgCenterX = rect.left + 180;
+        const svgCenterY = rect.top + 350;
+        const dx = e.clientX - svgCenterX;
+        const dy = e.clientY - svgCenterY;
+        
+        const newRadius = Math.max(30, Math.min(300, Math.hypot(dx, dy)));
+        state.compass.radius = newRadius;
+        updateCompassTransform();
+      }
+    });
+
+    radiusHandle.addEventListener('pointerup', (e) => {
+      isAdjustingCompassRadius = false;
+      if (typeof setCompassGuidesVisible === 'function') setCompassGuidesVisible(false);
+      else {
+        compassGuideCircle.setAttribute('opacity', '0');
+        compassRadiusLine.setAttribute('opacity', '0');
+        compassInfoBadge.setAttribute('opacity', '0');
+        radiusHandle.setAttribute('opacity', '0');
+      }
+      releasePointerLock(e.pointerId);
+      try { radiusHandle.releasePointerCapture(e.pointerId); } catch(err){}
+    });
+
+    // Kalem: basılı tutup sürükle = döndür + açıklık; yay çizimi yalnızca kilit açıkken
+    let isRotatingCompassOnly = false;
+    let pencilPrevAngleRad = null;
+    let pencilPrevTipCanvas = null;
+
+    function setCompassGuidesVisible(visible) {
+      const o = visible ? '1' : '0';
+      compassGuideCircle.setAttribute('opacity', o);
+      compassRadiusLine.setAttribute('opacity', o);
+      compassInfoBadge.setAttribute('opacity', o);
+      const ring = document.getElementById('pencilActiveRing');
+      if (ring) ring.setAttribute('opacity', visible ? '0.9' : '0');
+      radiusHandle.setAttribute('opacity', visible ? '1' : '0');
+    }
+
+    function compassCenterToCanvas() {
+      return boardCssToCanvas({ x: state.compass.x, y: state.compass.y });
+    }
+
+    function compassRadiusToCanvas(rCss) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / (rect.width || 1);
+      const scaleY = drawCanvas.height / (rect.height || 1);
+      return rCss * ((Math.abs(scaleX) + Math.abs(scaleY)) / 2 || 1);
+    }
+
+    function strokeCompassStyle() {
+      const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+      drawCtx.strokeStyle = state.penColor;
+      drawCtx.lineWidth = (state.currentTool === 'eraser' ? state.penWidth * 6 : state.currentTool === 'highlighter' ? state.penWidth * 4 : state.penWidth) * dpr;
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.globalAlpha = state.currentTool === 'highlighter' ? 0.35 : 1.0;
+      drawCtx.globalCompositeOperation = state.currentTool === 'eraser' ? 'destination-out' : 'source-over';
+    }
+
+    function pointerDeltaFromCompass(e) {
+      const rect = workspace.getBoundingClientRect();
+      const panX = (state.panOffsets && state.panOffsets.instrumentsLayer) ? state.panOffsets.instrumentsLayer[0] : 0;
+      const panY = (state.panOffsets && state.panOffsets.instrumentsLayer) ? state.panOffsets.instrumentsLayer[1] : 0;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      return { dx: px - (state.compass.x + panX), dy: py - (state.compass.y + panY) };
+    }
+
+    pencilAssembly.addEventListener('pointerdown', (e) => {
+      if (!acquirePointerLock(e.pointerId)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      isRotatingCompassOnly = true;
+      setCompassGuidesVisible(true);
+      saveCanvasState();
+      const { dx, dy } = pointerDeltaFromCompass(e);
+      const ang = Math.atan2(dy, dx);
+      pencilPrevAngleRad = ang;
+      const tip = boardCssToCanvas({
+        x: state.compass.x + state.compass.radius * Math.cos(ang),
+        y: state.compass.y + state.compass.radius * Math.sin(ang)
+      });
+      pencilPrevTipCanvas = tip;
+      try { pencilAssembly.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    pencilAssembly.addEventListener('pointermove', (e) => {
+      if (!isRotatingCompassOnly) return;
+      const { dx, dy } = pointerDeltaFromCompass(e);
+      const newRadius = Math.max(30, Math.min(300, Math.hypot(dx, dy)));
+      const newAngleRad = Math.atan2(dy, dx);
+
+      // Yay çiz yalnızca kilit açıkken
+      if (!state.compass.drawLocked && pencilPrevAngleRad !== null && isCanvasDrawingTool()) {
+        let delta = newAngleRad - pencilPrevAngleRad;
+        if (delta > Math.PI) delta -= Math.PI * 2;
+        if (delta < -Math.PI) delta += Math.PI * 2;
+        if (Math.abs(delta) > 0.00001) {
+          const center = compassCenterToCanvas();
+          // Yarıçap değişiyorsa iki ucu birleştiren kısa segment; sabitse gerçek yay
+          const rAvgCss = (state.compass.radius + newRadius) / 2;
+          const rCanvas = compassRadiusToCanvas(rAvgCss);
+          drawCtx.save();
+          strokeCompassStyle();
+          drawCtx.beginPath();
+          if (Math.abs(newRadius - state.compass.radius) < 1.5) {
+            drawCtx.arc(center.x, center.y, rCanvas, pencilPrevAngleRad, newAngleRad, delta < 0);
+          } else {
+            // Açıklık da değişiyorsa kalem ucunun izini çiz (spiral benzeri)
+            const tipNew = boardCssToCanvas({
+              x: state.compass.x + newRadius * Math.cos(newAngleRad),
+              y: state.compass.y + newRadius * Math.sin(newAngleRad)
+            });
+            if (pencilPrevTipCanvas) {
+              drawCtx.moveTo(pencilPrevTipCanvas.x, pencilPrevTipCanvas.y);
+              drawCtx.lineTo(tipNew.x, tipNew.y);
+            }
+            pencilPrevTipCanvas = tipNew;
+          }
+          drawCtx.stroke();
+          drawCtx.restore();
+          if (Math.abs(newRadius - state.compass.radius) < 1.5) {
+            pencilPrevTipCanvas = boardCssToCanvas({
+              x: state.compass.x + newRadius * Math.cos(newAngleRad),
+              y: state.compass.y + newRadius * Math.sin(newAngleRad)
+            });
+          }
+        }
+      }
+
+      state.compass.radius = newRadius;
+      state.compass.angle = newAngleRad * 180 / Math.PI;
+      pencilPrevAngleRad = newAngleRad;
+      updateCompassTransform();
+    });
+
+    function stopPencilOnlyRotation(e) {
+      isRotatingCompassOnly = false;
+      pencilPrevAngleRad = null;
+      pencilPrevTipCanvas = null;
+      setCompassGuidesVisible(false);
+      releasePointerLock(e.pointerId);
+      try { pencilAssembly.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+    pencilAssembly.addEventListener('pointerup', stopPencilOnlyRotation);
+    pencilAssembly.addEventListener('pointercancel', stopPencilOnlyRotation);
+
+
+    // Pergel çizim kilidi (varsayılan: kilitli = yazmaz, sadece döner)
+    const btnCompassDrawLock = document.getElementById('btnCompassDrawLock');
+    function syncCompassLockUI() {
+      const locked = !!state.compass.drawLocked;
+      const icon = document.getElementById('compassLockIcon');
+      const label = document.getElementById('compassLockLabel');
+      if (icon) icon.textContent = locked ? '🔒' : '✏️';
+      if (label) label.textContent = locked ? 'Çizim kilitli' : 'Çizim açık';
+      if (btnCompassDrawLock) {
+        btnCompassDrawLock.style.background = locked ? 'rgba(15,23,42,0.92)' : 'rgba(22,163,74,0.92)';
+        btnCompassDrawLock.style.borderColor = locked ? 'rgba(100,116,139,0.8)' : 'rgba(74,222,128,0.9)';
+      }
+    }
+    if (btnCompassDrawLock) {
+      btnCompassDrawLock.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+      btnCompassDrawLock.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.compass.drawLocked = !state.compass.drawLocked;
+        syncCompassLockUI();
+      });
+      syncCompassLockUI();
+    }
+
+    let isRotatingCompassAndDrawing = false;
+    let previousPointerAngle = null;
+    let previousCompassAngle = 0;
+
+    function pointerAngleAroundCompass(e) {
+      // Pointer workspace CSS; pergel pan ile kaymış olabilir
+      const rect = workspace.getBoundingClientRect();
+      const panX = (state.panOffsets && state.panOffsets.instrumentsLayer) ? state.panOffsets.instrumentsLayer[0] : 0;
+      const panY = (state.panOffsets && state.panOffsets.instrumentsLayer) ? state.panOffsets.instrumentsLayer[1] : 0;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      return Math.atan2(py - (state.compass.y + panY), px - (state.compass.x + panX));
+    }
+
+    topRotationHandle.addEventListener('pointerdown', (e) => {
+      if (!acquirePointerLock(e.pointerId)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      saveCanvasState();
+      isRotatingCompassAndDrawing = true;
+      previousPointerAngle = pointerAngleAroundCompass(e);
+      previousCompassAngle = state.compass.angle * Math.PI / 180;
+      try { topRotationHandle.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    topRotationHandle.addEventListener('pointermove', (e) => {
+      if (!isRotatingCompassAndDrawing) return;
+
+      const pointerAngle = pointerAngleAroundCompass(e);
+      let delta = pointerAngle - previousPointerAngle;
+      if (delta > Math.PI) delta -= Math.PI * 2;
+      if (delta < -Math.PI) delta += Math.PI * 2;
+
+      if (Math.abs(delta) > 0.00001) {
+        const nextCompassAngle = previousCompassAngle + delta;
+        // PDF / zoom / pan: CSS → canvas piksel dönüşümü (ham compass.x/y kullanma!)
+        const center = compassCenterToCanvas();
+        const rCanvas = compassRadiusToCanvas(state.compass.radius);
+
+        drawCtx.save();
+        strokeCompassStyle();
+        drawCtx.beginPath();
+        drawCtx.arc(center.x, center.y, rCanvas, previousCompassAngle, nextCompassAngle, delta < 0);
+        drawCtx.stroke();
+        drawCtx.restore();
+
+        previousCompassAngle = nextCompassAngle;
+        state.compass.angle += delta * 180 / Math.PI;
+        updateCompassTransform();
+      }
+      previousPointerAngle = pointerAngle;
+    });
+
+    function stopCompassRotation(e) {
+      isRotatingCompassAndDrawing = false;
+      previousPointerAngle = null;
+      releasePointerLock(e.pointerId);
+      try { topRotationHandle.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+    topRotationHandle.addEventListener('pointerup', stopCompassRotation);
+    topRotationHandle.addEventListener('pointercancel', stopCompassRotation);
+
+    function setupInstrumentInteractions(elementId, key) {
+      const el = document.getElementById(elementId);
+      let isDragging = false, isRotating = false, isResizing = false;
+      let startX = 0, startY = 0, startAngle = 0, startPointerAngle = 0;
+      let startWidth = 0, startHeight = 0;
+
+      el.addEventListener('pointermove', (e) => {
+        if (instrumentDrawing.active || isDragging || isRotating || isResizing) return;
+        if (e.target.closest('.handle') || e.target.closest('button')) {
+          el.classList.remove('edge-draw');
+          el.style.cursor = '';
+          return;
+        }
+        if (isNearInstrumentEdge(e, key, el)) {
+          el.classList.add('edge-draw');
+          el.style.cursor = (typeof PEN_CURSOR !== 'undefined' ? PEN_CURSOR : 'crosshair');
+        } else {
+          el.classList.remove('edge-draw');
+          el.style.cursor = '';
+        }
+      });
+      el.addEventListener('pointerleave', () => {
+        if (!instrumentDrawing.active) {
+          el.classList.remove('edge-draw');
+          el.style.cursor = '';
+        }
+      });
+
+      el.addEventListener('pointerdown', (e) => {
+        if (beginInstrumentDrawing(e, key, el)) { e.preventDefault(); e.stopPropagation(); return; }
+        // Başka parmak tahtada aktifse aracı hareket ettirme
+        if (!acquirePointerLock(e.pointerId)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const action = e.target.getAttribute('data-action');
+        const inst = state.instruments[key];
+        const rect = workspace.getBoundingClientRect();
+        const width = el.offsetWidth, height = el.offsetHeight;
+        if (action === 'rotate') {
+          isRotating = true;
+          startAngle = inst.angle;
+          const cx = rect.left + inst.x + width / 2;
+          const cy = rect.top + inst.y + height / 2;
+          startPointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+        } else if (action === 'resize') {
+          isResizing = true;
+          startWidth = width;
+          startHeight = height;
+        } else {
+          isDragging = true;
+        }
+        startX = e.clientX;
+        startY = e.clientY;
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+
+      el.addEventListener('pointermove', (e) => {
+        if (instrumentDrawing.active) { moveInstrumentDrawing(e, el); return; }
+        const inst = state.instruments[key];
+        if (!inst.visible) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (isDragging) {
+          inst.x += dx;
+          inst.y += dy;
+          startX = e.clientX;
+          startY = e.clientY;
+          applyTransform(el, inst);
+        } else if (isRotating) {
+          const rect = workspace.getBoundingClientRect();
+          const cx = rect.left + inst.x + el.offsetWidth / 2;
+          const cy = rect.top + inst.y + el.offsetHeight / 2;
+          const currentPointerAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+          let delta = currentPointerAngle - startPointerAngle;
+          if (delta > Math.PI) delta -= Math.PI * 2;
+          if (delta < -Math.PI) delta += Math.PI * 2;
+          inst.angle = startAngle + delta * 180 / Math.PI;
+          applyTransform(el, inst);
+        } else if (isResizing) {
+          if (key === 'ruler') {
+            inst.width = Math.max(200, Math.min(900, startWidth + dx));
+            el.style.width = `${inst.width}px`;
+            renderRulerGraphics();
+          } else {
+            const minSize = 150;
+            const scale = Math.max(minSize / startWidth, Math.max(minSize / startHeight, Math.min(2.5, Math.max(0.4, 1 + Math.max(dx / startWidth, dy / startHeight)))));
+            el.style.width = `${startWidth * scale}px`;
+            el.style.height = `${startHeight * scale}px`;
+          }
+        }
+      });
+
+      el.addEventListener('pointerup', (e) => {
+        if (instrumentDrawing.active) { finishInstrumentDrawing(e, el); return; }
+        isDragging = isRotating = isResizing = false;
+        releasePointerLock(e.pointerId);
+        try { el.releasePointerCapture(e.pointerId); } catch(err){}
+      });
+      el.addEventListener('pointercancel', (e) => {
+        if (instrumentDrawing.active) { finishInstrumentDrawing(e, el); return; }
+        isDragging = isRotating = isResizing = false;
+        releasePointerLock(e.pointerId);
+      });
+    }
+
+    function applyTransform(el, inst) {
+      el.style.transformOrigin = 'center center';
+      el.style.transform = `translate3d(${inst.x}px, ${inst.y}px, 0px) rotate(${inst.angle}deg)`;
+    }
+
+    setupInstrumentInteractions('ruler', 'ruler');
+    setupInstrumentInteractions('triangle45', 'triangle45');
+
+    function bindToggle(btnId, toolKey, elId) {
+      const btn = document.getElementById(btnId);
+      const el = document.getElementById(elId);
+
+      btn.addEventListener('click', () => {
+        state.instruments[toolKey].visible = !state.instruments[toolKey].visible;
+        if (state.instruments[toolKey].visible) {
+          el.classList.remove('hidden');
+          btn.classList.add('bg-indigo-600', 'text-white');
+          if (toolKey === 'protractor') {
+            updateProtractorTransform();
+          } else {
+            applyTransform(el, state.instruments[toolKey]);
+          }
+        } else {
+          el.classList.add('hidden');
+          btn.classList.remove('bg-indigo-600', 'text-white');
+        }
+      });
+    }
+
+    bindToggle('btnRuler', 'ruler', 'ruler');
+    bindToggle('btnProtractor', 'protractor', 'protractor');
+    bindToggle('btnTriangle45', 'triangle45', 'triangle45');
+
+    // Geometri araçlarını hem mouse ile çift tıklamayla hem dokunmatik çift dokunuşla kapat (kırmızı çarpı yok).
+    function hideInstrument(el) {
+      const key = el.id === 'ruler' ? 'ruler' : el.id === 'protractor' ? 'protractor' : 'triangle45';
+      if (state.instruments[key]) state.instruments[key].visible = false;
+      el.classList.add('hidden');
+      const btn = document.getElementById(key === 'ruler' ? 'btnRuler' : key === 'protractor' ? 'btnProtractor' : 'btnTriangle45');
+      if (btn) btn.classList.remove('bg-indigo-600', 'text-white');
+    }
+    document.querySelectorAll('.instrument').forEach(el => {
+      el.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.handle') || e.target.closest('button')) return;
+        hideInstrument(el);
+      });
+      let lastTouch = 0;
+      el.addEventListener('pointerup', (e) => {
+        if (e.pointerType !== 'touch') return;
+        if (e.target.closest('.handle') || e.target.closest('button')) return;
+        const now = Date.now();
+        if (now - lastTouch < 350) hideInstrument(el);
+        lastTouch = now;
+      });
+    });
+
+
+    const btnCompass = document.getElementById('btnCompass');
+    function hideCompass() {
+      state.compass.visible = false;
+      compassContainer.classList.add('hidden');
+      btnCompass.classList.remove('bg-indigo-600', 'text-white');
+    }
+    compassContainer.addEventListener('dblclick', (e) => {
+      if (e.target.closest('#radiusHandle') || e.target.closest('#topRotationHandle')) return;
+      hideCompass();
+    });
+    let compassLastTouch = 0;
+    compassContainer.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'touch') return;
+      if (e.target.closest('#radiusHandle') || e.target.closest('#topRotationHandle')) return;
+      const now = Date.now();
+      if (now - compassLastTouch < 350) hideCompass();
+      compassLastTouch = now;
+    });
+    btnCompass.addEventListener('click', () => {
+      state.compass.visible = !state.compass.visible;
+      if (state.compass.visible) {
+        compassContainer.classList.remove('hidden');
+        btnCompass.classList.add('bg-indigo-600', 'text-white');
+        updateCompassTransform();
+      } else {
+        compassContainer.classList.add('hidden');
+        btnCompass.classList.remove('bg-indigo-600', 'text-white');
+      }
+    });
+
+    // Çizim alanında tarayıcı jestlerini engelle (menü/palet kaydırması serbest — tüm cihazlar)
+    ['touchstart', 'touchmove', 'gesturestart', 'gesturechange'].forEach(evt => {
+      document.addEventListener(evt, (e) => {
+        if (!e.target || !e.target.closest) return;
+        // Menü, palet, metin kutusu, form, sağ üst kontroller: dokunma/tıklama serbest
+        if (e.target.closest('#sidebar') || e.target.closest('#bottomPalette') ||
+            e.target.closest('#textInputBox') || e.target.closest('#btnSidebarToggle') ||
+            e.target.closest('#sidebarOverlay') || e.target.closest('input') ||
+            e.target.closest('textarea') || e.target.closest('select') ||
+            e.target.closest('#backgroundPicker') || e.target.closest('#shapeMenu') ||
+            e.target.closest('#polygonMenu') || e.target.closest('#pdfCloseButton') ||
+            e.target.closest('#exportMenu') || e.target.closest('.img-bg-btn') ||
+            e.target.closest('.handle')) {
+          return;
+        }
+        // Sadece tahta / araçlar: pinch-zoom ve scroll yok
+        if (e.target.closest('#workspace') || e.target.closest('.instrument') || e.target.closest('#compassContainer')) {
+          if (e.cancelable) e.preventDefault();
+        }
+      }, { passive: false });
+    });
+
+    // Mobil yan menü (telefon/dar tablet) — özellikler aynı, sadece görünüm
+    (function setupMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const toggle = document.getElementById('btnSidebarToggle');
+      if (!sidebar || !overlay || !toggle) return;
+      function closeMobileSidebar() {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('open');
+      }
+      function openMobileSidebar() {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('open');
+      }
+      toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (sidebar.classList.contains('mobile-open')) closeMobileSidebar();
+        else openMobileSidebar();
+      });
+      overlay.addEventListener('click', closeMobileSidebar);
+      // Menüden araç seçince dar ekranda menüyü kapat (çizim alanını aç)
+      sidebar.addEventListener('click', (e) => {
+        if (window.innerWidth > 700) return;
+        const t = e.target.closest('button, label');
+        if (!t) return;
+        // Dosya input label'ı seçim bitene kadar açık kalsın
+        if (t.tagName === 'LABEL' && t.querySelector('input[type=file]')) return;
+        setTimeout(closeMobileSidebar, 180);
+      });
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 700) closeMobileSidebar();
+        try { resizeCanvases(); } catch (_) {}
+      });
+    })();
+
+    window.onload = () => {
+      resizeCanvases();
+      updatePageIndicator();
+      try { lucide.createIcons(); } catch (_) {}
+    };
+  </script>
+</body>
+</html>
